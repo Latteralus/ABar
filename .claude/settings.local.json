@@ -80,7 +80,10 @@
       "Bash(npm audit *)",
       "Bash(node -e \"console.log\\(require.resolve\\('@eslint/js'\\)\\)\")",
       "Bash(grep -rn '\"@/\\\\*\"\\\\|\"@\":' tsconfig.json vite.config.ts vitest.config.ts tsconfig.node.json)",
-      "Bash(npx prettier *)"
+      "Bash(npx prettier *)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(git fetch *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Chris\\OneDrive\\Desktop\\Hold\\ABar"
