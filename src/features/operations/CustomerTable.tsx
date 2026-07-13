@@ -39,7 +39,11 @@ function currentTabTotal(customer: Customer, tabs: Tab[]): number {
 export function CustomerTable({ customers, gameMinute, tabs }: CustomerTableProps) {
   const columns: DataTableColumn<Customer>[] = [
     { key: "name", header: "Name", render: (c) => `${c.firstName} ${c.lastName}` },
-    { key: "status", header: "Status", render: (c) => <Badge variant={c.status === "left" ? "neutral" : "positive"}>{STATUS_LABEL[c.status]}</Badge> },
+    {
+      key: "status",
+      header: "Status",
+      render: (c) => <Badge variant={c.status === "left" ? "neutral" : "positive"}>{STATUS_LABEL[c.status]}</Badge>,
+    },
     { key: "wait", header: "Wait", render: (c) => `${Math.max(0, gameMinute - c.statusEnteredAtGameMinute)}m` },
     { key: "satisfaction", header: "Satisfaction", render: (c) => formatPercent(c.satisfaction) },
     { key: "intoxication", header: "Intoxication", render: (c) => formatPercent(c.intoxication) },

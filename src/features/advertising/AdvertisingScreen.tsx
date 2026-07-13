@@ -71,8 +71,8 @@ export function AdvertisingScreen() {
 
       <Card title="Launch a Campaign or Promotion">
         <p style={{ color: "var(--text-secondary)", marginTop: 0 }}>
-          Newspaper/flyers/radio/social media build awareness gradually over several days. Drink specials, happy hour, and live entertainment affect only the day they're launched.
-          Advertising modifies demand — it never guarantees customers.
+          Newspaper/flyers/radio/social media build awareness gradually over several days. Drink specials, happy hour, and live
+          entertainment affect only the day they're launched. Advertising modifies demand — it never guarantees customers.
         </p>
         <DataTable columns={catalogColumns} rows={[...ADVERTISING_CATALOG]} rowKey={(e) => e.id} emptyLabel="No campaigns available." />
       </Card>

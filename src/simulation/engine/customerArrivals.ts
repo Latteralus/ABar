@@ -22,7 +22,9 @@ export function processArrivals(state: GameState, rng: SeededRandom, bus: EventB
 
   const { hour } = minuteOfDayToClockTime(state.gameMinute);
   const demandMultiplier =
-    (CUSTOMER_ARRIVAL_CONFIG.hourlyDemandMultiplier[hour] ?? 0.5) * reputationDemandMultiplier(state) * activePromotionDemandMultiplier(state);
+    (CUSTOMER_ARRIVAL_CONFIG.hourlyDemandMultiplier[hour] ?? 0.5) *
+    reputationDemandMultiplier(state) *
+    activePromotionDemandMultiplier(state);
   const arrivalChance = CUSTOMER_ARRIVAL_CONFIG.baseArrivalChancePerMinute * demandMultiplier;
 
   if (!rng.chance(arrivalChance)) return;
@@ -46,6 +48,9 @@ export function processArrivals(state: GameState, rng: SeededRandom, bus: EventB
     state.customerGroups.push({ id: groupId, memberIds, arrivalGameMinute: state.gameMinute });
   }
 
-  const label = actualSize === 1 ? `${state.customers[state.customers.length - 1].firstName} ${state.customers[state.customers.length - 1].lastName}` : `A group of ${actualSize}`;
+  const label =
+    actualSize === 1
+      ? `${state.customers[state.customers.length - 1].firstName} ${state.customers[state.customers.length - 1].lastName}`
+      : `A group of ${actualSize}`;
   logActivity(state, bus, "customer", `${label} entered.`);
 }

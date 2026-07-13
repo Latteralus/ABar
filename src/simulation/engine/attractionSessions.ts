@@ -42,7 +42,13 @@ function computeGameSatisfactionDelta(customer: Customer, attraction: Attraction
 }
 
 /** Starts a game: collects the fee, locks participants into `using_attraction`, and logs both the start and the fee collection as separate lines (matches the example log style). */
-export function startAttractionSession(state: GameState, bus: EventBus, attraction: Attraction, customerIds: EntityId[], groupId: EntityId | null): void {
+export function startAttractionSession(
+  state: GameState,
+  bus: EventBus,
+  attraction: Attraction,
+  customerIds: EntityId[],
+  groupId: EntityId | null,
+): void {
   const catalogEntry = getAttractionCatalogEntryForCategory(attraction.category);
   attraction.activeSession = {
     id: createId("attrsession"),

@@ -8,7 +8,15 @@ import { getProperty } from "@/data/properties";
 describe("expanded equipment catalog", () => {
   it("includes realistic bar equipment beyond the original three items", () => {
     const ids = EQUIPMENT_CATALOG.map((e) => e.id);
-    expect(ids).toEqual(expect.arrayContaining(["equip-microwave", "equip-countertop-fryer", "equip-floor-fryer", "equip-six-tap-draft", "equip-walk-in-cooler"]));
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        "equip-microwave",
+        "equip-countertop-fryer",
+        "equip-floor-fryer",
+        "equip-six-tap-draft",
+        "equip-walk-in-cooler",
+      ]),
+    );
   });
 
   it("purchases equipment with space and tier metadata", () => {

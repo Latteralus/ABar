@@ -16,9 +16,7 @@ import { logActivity } from "./activityLogger";
  */
 export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom, bus: EventBus): void {
   const hasSecurity = state.employees.some((e) => e.role === "security");
-  const calmStaffOnDuty = state.employees.some(
-    (e) => (e.role === "bartender" || e.role === "server") && hasCalmBonus(e),
-  );
+  const calmStaffOnDuty = state.employees.some((e) => (e.role === "bartender" || e.role === "server") && hasCalmBonus(e));
 
   for (const customer of state.customers) {
     if (customer.status === "left" || customer.status === "removed") continue;
@@ -48,7 +46,13 @@ export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom,
     if (!customer.removalStage) {
       customer.removalStage = "warned";
       customer.removalStageEnteredAtGameMinute = state.gameMinute;
-      logActivity(state, bus, "customer", `A staff member asked ${customer.firstName} ${customer.lastName} to leave — too intoxicated.`, "warning");
+      logActivity(
+        state,
+        bus,
+        "customer",
+        `A staff member asked ${customer.firstName} ${customer.lastName} to leave — too intoxicated.`,
+        "warning",
+      );
       continue;
     }
 
@@ -62,7 +66,13 @@ export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom,
       } else {
         customer.removalStage = "police_called";
         customer.removalStageEnteredAtGameMinute = state.gameMinute;
-        logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} refused to leave — staff called the police.`, "critical");
+        logActivity(
+          state,
+          bus,
+          "customer",
+          `${customer.firstName} ${customer.lastName} refused to leave — staff called the police.`,
+          "critical",
+        );
       }
       continue;
     }

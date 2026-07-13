@@ -46,7 +46,9 @@ describe("closeTabAndPay", () => {
       groupId: null,
       openedAtGameMinute: 0,
       closedAtGameMinute: null,
-      lineItems: [{ productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 2, unitPrice: 500, preparedByEmployeeId: null }],
+      lineItems: [
+        { productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 2, unitPrice: 500, preparedByEmployeeId: null },
+      ],
       subtotal: 0,
       tax: 0,
       tip: 0,
@@ -87,7 +89,9 @@ describe("closeTabAndPay", () => {
       groupId: null,
       openedAtGameMinute: 0,
       closedAtGameMinute: null,
-      lineItems: [{ productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 500, preparedByEmployeeId: null }],
+      lineItems: [
+        { productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 500, preparedByEmployeeId: null },
+      ],
       subtotal: 0,
       tax: 0,
       tip: 0,
@@ -116,7 +120,9 @@ describe("closeTabAndPay", () => {
       groupId: null,
       openedAtGameMinute: 0,
       closedAtGameMinute: null,
-      lineItems: [{ productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 1000, preparedByEmployeeId: null }],
+      lineItems: [
+        { productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 1000, preparedByEmployeeId: null },
+      ],
       subtotal: 0,
       tax: 0,
       tip: 0,

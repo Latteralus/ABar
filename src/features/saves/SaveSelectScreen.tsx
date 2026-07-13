@@ -29,7 +29,16 @@ export function SaveSelectScreen() {
           <p className="card-title">Existing Saves</p>
           {saveSummaries.length === 0 && <p style={{ color: "var(--text-muted)" }}>No saves yet.</p>}
           {saveSummaries.map((save) => (
-            <div key={save.saveId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+            <div
+              key={save.saveId}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 0",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
               <div>
                 <strong>{save.saveName}</strong>
                 <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
@@ -70,7 +79,8 @@ export function SaveSelectScreen() {
 
           <div className="form-row">
             <label>
-              <input type="checkbox" checked={acceptLoan} onChange={(e) => setAcceptLoan(e.target.checked)} /> Accept the $10,000 startup loan
+              <input type="checkbox" checked={acceptLoan} onChange={(e) => setAcceptLoan(e.target.checked)} /> Accept the $10,000 startup
+              loan
             </label>
           </div>
 

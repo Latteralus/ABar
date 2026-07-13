@@ -42,7 +42,10 @@ export function AttractionsScreen() {
   const requestAttractionContractRepair = useGameStore((s) => s.requestAttractionContractRepair);
 
   if (!state) return null;
-  const rows: Row[] = state.attractions.map((attraction) => ({ attraction, stats: computeAttractionStats(state as GameState, attraction) }));
+  const rows: Row[] = state.attractions.map((attraction) => ({
+    attraction,
+    stats: computeAttractionStats(state as GameState, attraction),
+  }));
 
   const columns: DataTableColumn<Row>[] = [
     { key: "name", header: "Name", render: (r) => r.attraction.name },
@@ -75,8 +78,16 @@ export function AttractionsScreen() {
       },
     },
     { key: "users", header: "Current Users", render: (r) => `${r.stats.currentUsers}` },
-    { key: "queue", header: "Queue", render: (r) => `${r.stats.queueParties} ${r.stats.queueParties === 1 ? "party" : "parties"} (~${r.stats.estimatedWaitMinutes}m wait)` },
-    { key: "progress", header: "Session Progress", render: (r) => (r.stats.sessionProgressPercent !== null ? `${r.stats.sessionProgressPercent}%` : "—") },
+    {
+      key: "queue",
+      header: "Queue",
+      render: (r) => `${r.stats.queueParties} ${r.stats.queueParties === 1 ? "party" : "parties"} (~${r.stats.estimatedWaitMinutes}m wait)`,
+    },
+    {
+      key: "progress",
+      header: "Session Progress",
+      render: (r) => (r.stats.sessionProgressPercent !== null ? `${r.stats.sessionProgressPercent}%` : "—"),
+    },
     { key: "condition", header: "Condition", render: (r) => `${formatPercent(r.attraction.condition)}%` },
     {
       key: "repairProgress",
@@ -93,7 +104,11 @@ export function AttractionsScreen() {
     { key: "games", header: "Games Played", render: (r) => `${r.stats.gamesPlayedTotal} total, ${r.stats.gamesPlayedToday} today` },
     { key: "avgWait", header: "Avg Wait", render: (r) => `${r.stats.averageWaitMinutes}m` },
     { key: "abandon", header: "Queue Abandonment", render: (r) => `${r.stats.queueAbandonmentRatePercent}%` },
-    { key: "satisfaction", header: "Satisfaction Effect", render: (r) => `${r.stats.satisfactionContributionTotal >= 0 ? "+" : ""}${r.stats.satisfactionContributionTotal}` },
+    {
+      key: "satisfaction",
+      header: "Satisfaction Effect",
+      render: (r) => `${r.stats.satisfactionContributionTotal >= 0 ? "+" : ""}${r.stats.satisfactionContributionTotal}`,
+    },
     { key: "secondary", header: "Est. Secondary Sales", render: (r) => formatCents(r.stats.estimatedSecondarySalesCents) },
     { key: "repairs", header: "Repairs", render: (r) => `${r.attraction.repairHistory.length}` },
     {
@@ -145,7 +160,11 @@ export function AttractionsScreen() {
                 <td>{entry.floorSpaceUnits}</td>
                 <td>{formatCents(entry.purchasePrice)}</td>
                 <td>
-                  <button className="btn btn-primary" onClick={() => purchaseAttraction(entry.id)} disabled={state.cash < entry.purchasePrice}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => purchaseAttraction(entry.id)}
+                    disabled={state.cash < entry.purchasePrice}
+                  >
                     Purchase
                   </button>
                 </td>

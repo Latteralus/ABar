@@ -94,7 +94,13 @@ function handleTakeOrderComplete(state: GameState, rng: SeededRandom, bus: Event
       // Section 11: staff stop serving customers who exceed service limits, without ejecting them outright.
       customer.status = "waiting_to_pay";
       customer.statusEnteredAtGameMinute = state.gameMinute;
-      logActivity(state, bus, "customer", `${employee.firstName} ${employee.lastName} cut off ${customer.firstName} ${customer.lastName} after too many drinks.`, "warning");
+      logActivity(
+        state,
+        bus,
+        "customer",
+        `${employee.firstName} ${employee.lastName} cut off ${customer.firstName} ${customer.lastName} after too many drinks.`,
+        "warning",
+      );
       return;
     }
     logNoAvailableProduct(state, bus, customer);
@@ -140,7 +146,12 @@ function handleTakeOrderComplete(state: GameState, rng: SeededRandom, bus: Event
     }),
   );
 
-  logActivity(state, bus, "customer", `${employee.firstName} ${employee.lastName} took an order from ${customer.firstName} ${customer.lastName} for ${product.name}.`);
+  logActivity(
+    state,
+    bus,
+    "customer",
+    `${employee.firstName} ${employee.lastName} took an order from ${customer.firstName} ${customer.lastName} for ${product.name}.`,
+  );
 }
 
 /** Shared by prepare_drink and prepare_food — both just consume the recipe and queue the matching deliver task. */
@@ -155,7 +166,13 @@ function handlePrepareItemComplete(state: GameState, bus: EventBus, task: Servic
     customer.status = "deciding_next_order";
     customer.statusEnteredAtGameMinute = state.gameMinute;
     customer.satisfaction = clampRound(customer.satisfaction - 8);
-    logActivity(state, bus, "inventory", `${result.missingItemName} ran out before ${customer.firstName} ${customer.lastName}'s order could be prepared.`, "warning");
+    logActivity(
+      state,
+      bus,
+      "inventory",
+      `${result.missingItemName} ran out before ${customer.firstName} ${customer.lastName}'s order could be prepared.`,
+      "warning",
+    );
     return;
   }
 
@@ -209,7 +226,13 @@ function handleDeliverItemComplete(state: GameState, rng: SeededRandom, bus: Eve
   const unitPrice = effectivePrice(state, product.id, listing?.price ?? product.suggestedPrice);
 
   if (tab) {
-    tab.lineItems.push({ productId: product.id, productName: product.name, quantity: 1, unitPrice, preparedByEmployeeId: order.preparedByEmployeeId });
+    tab.lineItems.push({
+      productId: product.id,
+      productName: product.name,
+      quantity: 1,
+      unitPrice,
+      preparedByEmployeeId: order.preparedByEmployeeId,
+    });
   }
 
   order.status = "served";
@@ -241,7 +264,12 @@ function handleDeliverItemComplete(state: GameState, rng: SeededRandom, bus: Eve
   state.barCleanliness = Math.max(0, state.barCleanliness - CLEANLINESS_CONFIG.decayPerDrinkServed);
 
   bus.emit("order:served", { order });
-  logActivity(state, bus, "sale", `${employee.firstName} ${employee.lastName} served ${product.name} to ${customer.firstName} ${customer.lastName}.`);
+  logActivity(
+    state,
+    bus,
+    "sale",
+    `${employee.firstName} ${employee.lastName} served ${product.name} to ${customer.firstName} ${customer.lastName}.`,
+  );
 }
 
 function handleProcessPaymentComplete(state: GameState, rng: SeededRandom, bus: EventBus, task: ServiceTask, employee: Employee): void {
@@ -307,7 +335,13 @@ function handleRemoveCustomerComplete(state: GameState, rng: SeededRandom, bus: 
   if (!customer || customer.status === "left" || customer.status === "removed") return;
   departCustomer(state, bus, rng, customer, "removed_intoxication");
   customer.status = "removed";
-  logActivity(state, bus, "customer", `${employee.firstName} ${employee.lastName} removed an intoxicated customer, ${customer.firstName} ${customer.lastName}.`, "warning");
+  logActivity(
+    state,
+    bus,
+    "customer",
+    `${employee.firstName} ${employee.lastName} removed an intoxicated customer, ${customer.firstName} ${customer.lastName}.`,
+    "warning",
+  );
 }
 
 function advanceAssignedTasks(state: GameState, rng: SeededRandom, bus: EventBus): void {
@@ -364,7 +398,9 @@ function advanceAssignedTasks(state: GameState, rng: SeededRandom, bus: EventBus
   }
 
   // Drop old completed/cancelled tasks so the task list doesn't grow unbounded across a shift.
-  state.tasks = state.tasks.filter((t) => t.status === "queued" || t.status === "in_progress" || state.gameMinute - t.createdAtGameMinute < 5);
+  state.tasks = state.tasks.filter(
+    (t) => t.status === "queued" || t.status === "in_progress" || state.gameMinute - t.createdAtGameMinute < 5,
+  );
 }
 
 export function advanceEmployees(state: GameState, rng: SeededRandom, bus: EventBus): void {

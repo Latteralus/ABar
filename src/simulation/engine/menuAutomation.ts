@@ -37,6 +37,11 @@ export function ensureMenuAutoActivation(state: GameState, bus: EventBus): void 
     if (!hasEnoughSupplyForOne(state, listing.productId)) continue;
 
     listing.isActive = true;
-    logActivity(state, bus, "system", `${getProduct(listing.productId).name} was automatically added to the menu — fully stocked and staffed.`);
+    logActivity(
+      state,
+      bus,
+      "system",
+      `${getProduct(listing.productId).name} was automatically added to the menu — fully stocked and staffed.`,
+    );
   }
 }

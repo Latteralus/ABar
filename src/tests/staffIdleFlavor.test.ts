@@ -13,7 +13,17 @@ function makeEmployee(role: Employee["role"], overrides: Partial<Employee> = {})
     role,
     wagePerShiftCents: 10000,
     personality: [],
-    skills: { bartending: 50, serving: 50, cooking: 50, speed: 50, accuracy: 50, charisma: 50, cleanliness: 50, security: 50, management: 50 },
+    skills: {
+      bartending: 50,
+      serving: 50,
+      cooking: 50,
+      speed: 50,
+      accuracy: 50,
+      charisma: 50,
+      cleanliness: 50,
+      security: 50,
+      management: 50,
+    },
     shiftsWorked: 0,
     hiredAtGameMinute: 0,
     currentTaskId: null,
@@ -23,8 +33,8 @@ function makeEmployee(role: Employee["role"], overrides: Partial<Employee> = {})
   };
 }
 
-const alwaysChance = { chance: () => true, pick: <T,>(arr: readonly T[]) => arr[0] } as unknown as SeededRandom;
-const neverChance = { chance: () => false, pick: <T,>(arr: readonly T[]) => arr[0] } as unknown as SeededRandom;
+const alwaysChance = { chance: () => true, pick: <T>(arr: readonly T[]) => arr[0] } as unknown as SeededRandom;
+const neverChance = { chance: () => false, pick: <T>(arr: readonly T[]) => arr[0] } as unknown as SeededRandom;
 
 describe("generateStaffIdleFlavor", () => {
   it("logs a flavor line for an idle bartender", () => {

@@ -33,9 +33,7 @@ function signedAmount(entry: LedgerEntry): Cents {
 
 /** Cash balance as of the end of `day`, reconstructed from the ledger's asset_cash entries (reliable from a $0 baseline at game genesis since every cash-affecting command posts one). */
 export function cashAsOfDay(state: GameState, day: number): Cents {
-  return state.ledger
-    .filter((e) => e.category === "asset_cash" && e.gameDay <= day)
-    .reduce((sum, e) => sum + signedAmount(e), 0);
+  return state.ledger.filter((e) => e.category === "asset_cash" && e.gameDay <= day).reduce((sum, e) => sum + signedAmount(e), 0);
 }
 
 export function summarizeCashFlow(state: GameState, fromGameDay: number, toGameDay: number): CashFlowSummary {

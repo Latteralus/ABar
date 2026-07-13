@@ -54,7 +54,14 @@ export function applyDailyEquipmentWear(state: GameState, bus: EventBus): void {
     if (eq.condition < MAINTENANCE_CONFIG.degradedConditionThreshold) {
       if (wasOperational) {
         eq.currentStatus = "degraded";
-        logActivity(state, bus, "equipment", `${eq.name} condition dropped below ${MAINTENANCE_CONFIG.degradedConditionThreshold}%.`, "warning", eq.id);
+        logActivity(
+          state,
+          bus,
+          "equipment",
+          `${eq.name} condition dropped below ${MAINTENANCE_CONFIG.degradedConditionThreshold}%.`,
+          "warning",
+          eq.id,
+        );
       }
       if (eq.condition <= 0) {
         eq.currentStatus = "failed";

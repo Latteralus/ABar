@@ -2,16 +2,7 @@ import type { Cents, EntityId, GameMinute } from "./common";
 
 export type InventoryCategory = "liquor" | "beer" | "soft_drink" | "mixer" | "garnish" | "food" | "supply";
 
-export type InventoryUnit =
-  | "bottle"
-  | "case"
-  | "keg"
-  | "ounce"
-  | "fluid_ounce"
-  | "serving"
-  | "pound"
-  | "unit"
-  | "portion";
+export type InventoryUnit = "bottle" | "case" | "keg" | "ounce" | "fluid_ounce" | "serving" | "pound" | "unit" | "portion";
 
 export type StorageLocation = "general" | "refrigerated" | "frozen" | "bar_stock" | "kitchen_stock";
 

@@ -34,7 +34,9 @@ export function computeAttractionStats(state: GameState, attraction: Attraction)
   const weekStart = Math.max(1, state.gameDay - 6);
 
   const sessionProgressPercent = attraction.activeSession
-    ? Math.round(((catalogEntry.gameDurationMinutes - attraction.activeSession.remainingGameMinutes) / catalogEntry.gameDurationMinutes) * 100)
+    ? Math.round(
+        ((catalogEntry.gameDurationMinutes - attraction.activeSession.remainingGameMinutes) / catalogEntry.gameDurationMinutes) * 100,
+      )
     : null;
 
   const totalWaitMinutes = attraction.queueHistory.reduce((sum, r) => sum + Math.max(0, r.leftAtGameMinute - r.joinedAtGameMinute), 0);

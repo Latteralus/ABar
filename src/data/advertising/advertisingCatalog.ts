@@ -40,7 +40,7 @@ export const ADVERTISING_CATALOG: readonly PromotionCatalogEntry[] = [
     costCents: 300_00,
     durationDays: 6,
     delayDays: 1,
-    peakDemandMultiplier: 1.20,
+    peakDemandMultiplier: 1.2,
   },
   {
     id: "promo-drink-special",
@@ -50,7 +50,7 @@ export const ADVERTISING_CATALOG: readonly PromotionCatalogEntry[] = [
     costCents: 40_00,
     durationDays: 1,
     delayDays: 0,
-    peakDemandMultiplier: 1.10,
+    peakDemandMultiplier: 1.1,
     priceDiscountPercent: 30,
     targetProductId: "prod-rum-cola",
   },
@@ -73,7 +73,7 @@ export const ADVERTISING_CATALOG: readonly PromotionCatalogEntry[] = [
     costCents: 120_00,
     durationDays: 1,
     delayDays: 0,
-    peakDemandMultiplier: 1.20,
+    peakDemandMultiplier: 1.2,
   },
 ];
 

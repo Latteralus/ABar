@@ -15,7 +15,9 @@ describe("advertising", () => {
     expect(result.success).toBe(true);
     expect(state.cash).toBe(cashBefore - 50_00);
     expect(state.ledger.some((e) => e.category === "opex_advertising" && e.amount === 50_00)).toBe(true);
-    expect(state.ledger.filter((e) => e.category === "asset_cash").reduce((s, e) => s + (e.type === "credit" ? e.amount : -e.amount), 0)).toBe(state.cash);
+    expect(
+      state.ledger.filter((e) => e.category === "asset_cash").reduce((s, e) => s + (e.type === "credit" ? e.amount : -e.amount), 0),
+    ).toBe(state.cash);
 
     const duplicate = commandService.purchasePromotion(state, bus, "promo-flyers");
     expect(duplicate.success).toBe(false);

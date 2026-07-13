@@ -22,7 +22,11 @@ export function EmployeeTable({ state }: { state: GameState }) {
   const columns: DataTableColumn<Employee>[] = [
     { key: "name", header: "Name", render: (e) => `${e.firstName} ${e.lastName}` },
     { key: "role", header: "Role", render: (e) => e.role },
-    { key: "status", header: "Status", render: (e) => <Badge variant={e.status === "idle" ? "neutral" : "positive"}>{STATUS_LABEL[e.status]}</Badge> },
+    {
+      key: "status",
+      header: "Status",
+      render: (e) => <Badge variant={e.status === "idle" ? "neutral" : "positive"}>{STATUS_LABEL[e.status]}</Badge>,
+    },
     {
       key: "task",
       header: "Current Task",

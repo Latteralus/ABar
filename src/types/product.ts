@@ -3,16 +3,7 @@ import type { EquipmentCategory } from "./equipment";
 
 export type ProductCategory = "soft_drink" | "beer" | "liquor" | "mixed_drink" | "food";
 
-export type EmployeeRole =
-  | "bartender"
-  | "server"
-  | "cook"
-  | "host"
-  | "dishwasher"
-  | "barback"
-  | "security"
-  | "maintenance"
-  | "manager";
+export type EmployeeRole = "bartender" | "server" | "cook" | "host" | "dishwasher" | "barback" | "security" | "maintenance" | "manager";
 
 /** One ingredient consumption requirement within a recipe. */
 export interface RecipeIngredient {

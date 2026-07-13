@@ -45,7 +45,9 @@ describe("saveService", () => {
   it("backfills currentStatus/repairHistory on equipment from a pre-Stage-4 (v3) save", () => {
     const state = createNewGameState({ saveName: "Old Save", acquisitionType: "lease", acceptLoan: false });
     // Simulate a save written before Stage 4 added these fields.
-    state.equipment = state.equipment.map(({ currentStatus: _currentStatus, repairHistory: _repairHistory, ...rest }) => rest) as typeof state.equipment;
+    state.equipment = state.equipment.map(
+      ({ currentStatus: _currentStatus, repairHistory: _repairHistory, ...rest }) => rest,
+    ) as typeof state.equipment;
     const rawEnvelope = { version: 3, savedAtIso: new Date().toISOString(), state };
     window.localStorage.setItem(`${SAVE_CONFIG.localStorageKeyPrefix}${state.saveId}`, JSON.stringify(rawEnvelope));
 

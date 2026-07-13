@@ -1,12 +1,7 @@
 import { STATUS_LABEL } from "./CustomerTable";
 import type { Attraction, Customer, CustomerStatus, GameState, Property } from "@/types";
 
-const NOT_SEATED_STATUSES: ReadonlySet<CustomerStatus> = new Set([
-  "waiting_for_seat",
-  "leaving",
-  "left",
-  "removed",
-]);
+const NOT_SEATED_STATUSES: ReadonlySet<CustomerStatus> = new Set(["waiting_for_seat", "leaving", "left", "removed"]);
 
 type StatusBucket = "waiting" | "active" | "attraction" | "leaving";
 
@@ -154,16 +149,25 @@ interface FloorViewProps {
 }
 
 export function FloorView({ state, property }: FloorViewProps) {
-  const { barSeats, tables, standingSlots, overflowLine, seatedCapacity, standingCapacity, activeCount } = deriveFloorLayout(state, property);
+  const { barSeats, tables, standingSlots, overflowLine, seatedCapacity, standingCapacity, activeCount } = deriveFloorLayout(
+    state,
+    property,
+  );
   const seatedUsed = barSeats.filter(Boolean).length + tables.reduce((sum, seats) => sum + seats.filter(Boolean).length, 0);
   const standingUsed = standingSlots.filter(Boolean).length;
 
   return (
     <div className="floor-view">
       <div className="floor-capacity-summary">
-        <span>Total occupancy: {activeCount} / {property.customerCapacity}</span>
-        <span>Seats: {seatedUsed} / {seatedCapacity}</span>
-        <span>Standing / waiting: {standingUsed} / {standingCapacity}</span>
+        <span>
+          Total occupancy: {activeCount} / {property.customerCapacity}
+        </span>
+        <span>
+          Seats: {seatedUsed} / {seatedCapacity}
+        </span>
+        <span>
+          Standing / waiting: {standingUsed} / {standingCapacity}
+        </span>
       </div>
 
       <div className="floor-legend">

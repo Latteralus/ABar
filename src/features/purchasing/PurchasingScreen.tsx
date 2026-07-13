@@ -111,8 +111,21 @@ export function PurchasingScreen() {
     { key: "num", header: "PO #", render: (po) => `#${po.orderNumber}` },
     { key: "lines", header: "Items", render: (po) => `${po.lines.length}` },
     { key: "total", header: "Total", render: (po) => formatCents(po.totalCost) },
-    { key: "payment", header: "Payment", render: (po) => (po.paymentStatus === "paid" ? <Badge variant="positive">Paid</Badge> : <Badge variant="warning">On Tab</Badge>) },
-    { key: "delivery", header: "Delivery", render: (po) => (po.deliveryStatus === "delivered" ? <Badge variant="positive">Delivered</Badge> : <Badge variant="neutral">Pending — next open</Badge>) },
+    {
+      key: "payment",
+      header: "Payment",
+      render: (po) => (po.paymentStatus === "paid" ? <Badge variant="positive">Paid</Badge> : <Badge variant="warning">On Tab</Badge>),
+    },
+    {
+      key: "delivery",
+      header: "Delivery",
+      render: (po) =>
+        po.deliveryStatus === "delivered" ? (
+          <Badge variant="positive">Delivered</Badge>
+        ) : (
+          <Badge variant="neutral">Pending — next open</Badge>
+        ),
+    },
   ];
 
   return (
@@ -146,7 +159,12 @@ export function PurchasingScreen() {
       </Card>
 
       <Card title="Purchase Orders">
-        <DataTable columns={orderColumns} rows={[...state.purchaseOrders].reverse()} rowKey={(po) => po.id} emptyLabel="No orders placed yet." />
+        <DataTable
+          columns={orderColumns}
+          rows={[...state.purchaseOrders].reverse()}
+          rowKey={(po) => po.id}
+          emptyLabel="No orders placed yet."
+        />
       </Card>
     </div>
   );

@@ -142,10 +142,7 @@ describe("attraction queue", () => {
     const { state, bus } = setup();
     const attraction = poolTable(state);
     state.customerGroups.push({ id: "group-1", memberIds: ["cust-a", "cust-b"], arrivalGameMinute: 0 });
-    state.customers.push(
-      makeCustomer({ id: "cust-a", groupId: "group-1" }),
-      makeCustomer({ id: "cust-b", groupId: "group-1" }),
-    );
+    state.customers.push(makeCustomer({ id: "cust-a", groupId: "group-1" }), makeCustomer({ id: "cust-b", groupId: "group-1" }));
     joinAttractionQueue(state, bus, attraction, ["cust-a", "cust-b"], "group-1");
 
     ensureAttractionQueueProgress(state, bus);
@@ -294,7 +291,12 @@ describe("attraction breakdown", () => {
 describe("ordering while at an attraction", () => {
   it("shouldOrderWhileAtAttraction scales the configured chance by reorderTendency", () => {
     let capturedChance = -1;
-    const rng = { chance: (p: number) => { capturedChance = p; return true; } } as unknown as SeededRandom;
+    const rng = {
+      chance: (p: number) => {
+        capturedChance = p;
+        return true;
+      },
+    } as unknown as SeededRandom;
     const customer = makeCustomer({ reorderTendency: 100 });
 
     expect(shouldOrderWhileAtAttraction(rng, customer)).toBe(true);

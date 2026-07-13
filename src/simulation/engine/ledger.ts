@@ -25,16 +25,40 @@ interface CashMovementOptions {
 export function spendCash(state: GameState, amountCents: number, options: CashMovementOptions): void {
   state.cash -= amountCents;
   if (options.category) {
-    postLedger(state, { category: options.category, type: "debit", amount: amountCents, description: options.description, relatedEntityId: options.relatedEntityId });
+    postLedger(state, {
+      category: options.category,
+      type: "debit",
+      amount: amountCents,
+      description: options.description,
+      relatedEntityId: options.relatedEntityId,
+    });
   }
-  postLedger(state, { category: "asset_cash", type: "debit", amount: amountCents, description: options.description, relatedEntityId: options.relatedEntityId });
+  postLedger(state, {
+    category: "asset_cash",
+    type: "debit",
+    amount: amountCents,
+    description: options.description,
+    relatedEntityId: options.relatedEntityId,
+  });
 }
 
 /** Increments `state.cash` and posts the paired ledger entries — the credit-side counterpart to `spendCash`. */
 export function receiveCash(state: GameState, amountCents: number, options: CashMovementOptions): void {
   state.cash += amountCents;
   if (options.category) {
-    postLedger(state, { category: options.category, type: "credit", amount: amountCents, description: options.description, relatedEntityId: options.relatedEntityId });
+    postLedger(state, {
+      category: options.category,
+      type: "credit",
+      amount: amountCents,
+      description: options.description,
+      relatedEntityId: options.relatedEntityId,
+    });
   }
-  postLedger(state, { category: "asset_cash", type: "credit", amount: amountCents, description: options.description, relatedEntityId: options.relatedEntityId });
+  postLedger(state, {
+    category: "asset_cash",
+    type: "credit",
+    amount: amountCents,
+    description: options.description,
+    relatedEntityId: options.relatedEntityId,
+  });
 }

@@ -20,10 +20,7 @@ function setStatus(customer: Customer, status: Customer["status"], atMinute: num
 }
 
 function waitToleranceMinutes(customer: Customer): number {
-  return (
-    CUSTOMER_BEHAVIOR_CONFIG.baseWaitToleranceMinutes +
-    customer.patience * CUSTOMER_BEHAVIOR_CONFIG.waitToleranceSkillScale
-  );
+  return CUSTOMER_BEHAVIOR_CONFIG.baseWaitToleranceMinutes + customer.patience * CUSTOMER_BEHAVIOR_CONFIG.waitToleranceSkillScale;
 }
 
 /** Cosmetic-only "chatted with..." log line — no mechanical effect beyond the caller's own satisfaction nudge. */
@@ -34,7 +31,12 @@ function logSocialFlavor(state: GameState, bus: EventBus, rng: SeededRandom, cus
   if (staffCandidates.length > 0 && rng.chance(0.4)) {
     const employee = rng.pick(staffCandidates);
     const template = rng.pick(SOCIAL_FLAVOR_WITH_STAFF);
-    logActivity(state, bus, "customer", fillTemplate(template, { customer: customerName, employee: `${employee.firstName} ${employee.lastName}` }));
+    logActivity(
+      state,
+      bus,
+      "customer",
+      fillTemplate(template, { customer: customerName, employee: `${employee.firstName} ${employee.lastName}` }),
+    );
   } else {
     const template = rng.pick(SOCIAL_FLAVOR_GENERIC);
     logActivity(state, bus, "customer", fillTemplate(template, { customer: customerName }));
@@ -139,7 +141,8 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
         );
         const reorderChance = (customer.reorderTendency / 100) * CUSTOMER_BEHAVIOR_CONFIG.reorderChanceOnDecision * diminishingFactor;
         const withinVisitCap = visitMinutes < CUSTOMER_BEHAVIOR_CONFIG.maxVisitMinutesBeforeCheck;
-        const wantsMore = canAfford && withinVisitCap && roundsSoFar < CUSTOMER_BEHAVIOR_CONFIG.maxRoundsPerVisit && rng.chance(reorderChance);
+        const wantsMore =
+          canAfford && withinVisitCap && roundsSoFar < CUSTOMER_BEHAVIOR_CONFIG.maxRoundsPerVisit && rng.chance(reorderChance);
 
         customer.phaseTargetMinutes = undefined;
         if (wantsMore) {
@@ -155,7 +158,13 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
               tab.closedAtGameMinute = state.gameMinute;
             }
             departCustomer(state, bus, rng, customer, "item_unavailable");
-            logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} left without ordering anything available.`, "warning");
+            logActivity(
+              state,
+              bus,
+              "customer",
+              `${customer.firstName} ${customer.lastName} left without ordering anything available.`,
+              "warning",
+            );
           } else {
             setStatus(customer, "waiting_to_pay", state.gameMinute);
           }

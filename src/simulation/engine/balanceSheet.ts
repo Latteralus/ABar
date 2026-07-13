@@ -51,7 +51,8 @@ export function summarizeBalanceSheet(state: GameState): BalanceSheetSummary {
   const utilityBillsPayable = netLedgerBalance(state, "liability_utility_bills");
   const leaseObligationsPayable = netLedgerBalance(state, "liability_lease_obligations");
   const salesTaxPayable = netLedgerBalance(state, "liability_sales_tax_payable");
-  const totalLiabilities = loanPayable + supplyTabsPayable + accruedPayroll + utilityBillsPayable + leaseObligationsPayable + salesTaxPayable;
+  const totalLiabilities =
+    loanPayable + supplyTabsPayable + accruedPayroll + utilityBillsPayable + leaseObligationsPayable + salesTaxPayable;
 
   const ownerCapital = netLedgerBalance(state, "equity_owner_capital");
   const totalEquity = totalAssets - totalLiabilities;

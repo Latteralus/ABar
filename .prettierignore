@@ -3,3 +3,8 @@ node_modules
 coverage
 package-lock.json
 *.tsbuildinfo
+
+# Hand-authored docs use their own prose/list conventions (e.g. *emphasis*, * bullets) -
+# Prettier's markdown formatter normalizes those to _underscores_/- dashes, which is a
+# meaning-preserving but noisy rewrite of content that isn't code. Left out of scope deliberately.
+*.md

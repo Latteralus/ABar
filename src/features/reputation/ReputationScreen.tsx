@@ -44,8 +44,16 @@ export function ReputationScreen() {
       <Card title="Service Reputation">
         <div className="card-grid">
           <StatTile label="Current Score" value={formatPercent(state.reputation.score)} />
-          <StatTile label="Daily Change" value={signed(dailyChange)} tone={dailyChange > 0 ? "positive" : dailyChange < 0 ? "negative" : "neutral"} />
-          <StatTile label="Weekly Change" value={signed(weeklyChange)} tone={weeklyChange > 0 ? "positive" : weeklyChange < 0 ? "negative" : "neutral"} />
+          <StatTile
+            label="Daily Change"
+            value={signed(dailyChange)}
+            tone={dailyChange > 0 ? "positive" : dailyChange < 0 ? "negative" : "neutral"}
+          />
+          <StatTile
+            label="Weekly Change"
+            value={signed(weeklyChange)}
+            tone={weeklyChange > 0 ? "positive" : weeklyChange < 0 ? "negative" : "neutral"}
+          />
         </div>
         {latest && (
           <div className="card-grid" style={{ marginTop: 12 }}>

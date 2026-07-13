@@ -91,10 +91,23 @@ for (const e of entries) {
 }
 
 console.log("---COMPLETE VISIT DURATIONS (minutes)---", durations);
-console.log("---MIN/MAX/AVG---", durations.length ? Math.min(...durations) : null, durations.length ? Math.max(...durations) : null, durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1) : null);
+console.log(
+  "---MIN/MAX/AVG---",
+  durations.length ? Math.min(...durations) : null,
+  durations.length ? Math.max(...durations) : null,
+  durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1) : null,
+);
 
-console.log("---MENTIONS CUSTOMER CHAT FLAVOR---", /chatted with|people-watched|struck up a conversation|relaxed and took in|laughed at something|scrolled through/i.test(logText));
-console.log("---MENTIONS STAFF IDLE FLAVOR---", /wiped down the bar|polished glassware|chatted with a regular|checked the taps|checked in on a table|tidied up an empty table|refilled the napkin/i.test(logText));
+console.log(
+  "---MENTIONS CUSTOMER CHAT FLAVOR---",
+  /chatted with|people-watched|struck up a conversation|relaxed and took in|laughed at something|scrolled through/i.test(logText),
+);
+console.log(
+  "---MENTIONS STAFF IDLE FLAVOR---",
+  /wiped down the bar|polished glassware|chatted with a regular|checked the taps|checked in on a table|tidied up an empty table|refilled the napkin/i.test(
+    logText,
+  ),
+);
 console.log("---PAGE ERRORS---", errors);
 
 await browser.close();

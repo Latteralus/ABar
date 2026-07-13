@@ -6,7 +6,11 @@ import { receiveCash } from "./ledger";
 
 /** Charges a flat per-game fee (not per participant — matches "Pool Table 1 collected a $2.00 game fee" regardless of player count). */
 export function collectAttractionFee(state: GameState, bus: EventBus, attraction: Attraction, feeCents: number): void {
-  receiveCash(state, feeCents, { category: "revenue_attraction", description: `${attraction.name} game fee`, relatedEntityId: attraction.id });
+  receiveCash(state, feeCents, {
+    category: "revenue_attraction",
+    description: `${attraction.name} game fee`,
+    relatedEntityId: attraction.id,
+  });
   logActivity(state, bus, "attraction", `${attraction.name} collected a ${formatCents(feeCents)} game fee.`, "info", attraction.id);
 }
 

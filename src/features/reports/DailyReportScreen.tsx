@@ -28,7 +28,11 @@ export function DailyReportView({ report }: { report: DailyReport }) {
         <StatTile label="Avg Wait" value={`${report.averageWaitMinutes}m`} />
         <StatTile label="Customers Lost" value={`${report.customersLost}`} tone={report.customersLost > 0 ? "negative" : "neutral"} />
         <StatTile label="Inventory Used" value={`${report.inventoryConsumedUnits}`} />
-        <StatTile label="Inventory Wasted" value={`${report.inventoryWastedUnits}`} tone={report.inventoryWastedUnits > 0 ? "negative" : "neutral"} />
+        <StatTile
+          label="Inventory Wasted"
+          value={`${report.inventoryWastedUnits}`}
+          tone={report.inventoryWastedUnits > 0 ? "negative" : "neutral"}
+        />
       </div>
 
       <p className="card-title" style={{ marginTop: 16 }}>

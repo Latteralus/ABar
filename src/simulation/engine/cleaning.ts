@@ -7,9 +7,7 @@ import type { GameState } from "@/types";
 export function ensureCleaningTasks(state: GameState): void {
   if (state.barCleanliness >= CLEANLINESS_CONFIG.taskTriggerThreshold) return;
 
-  const hasPendingCleanTask = state.tasks.some(
-    (t) => t.type === "clean_bar" && t.status !== "complete" && t.status !== "cancelled",
-  );
+  const hasPendingCleanTask = state.tasks.some((t) => t.type === "clean_bar" && t.status !== "complete" && t.status !== "cancelled");
   if (hasPendingCleanTask) return;
 
   state.tasks.push(

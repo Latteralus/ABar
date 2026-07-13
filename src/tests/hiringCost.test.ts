@@ -14,9 +14,9 @@ describe("hiring cost", () => {
     expect(result.success).toBe(true);
     expect(state.cash).toBe(cashBefore - HIRING_CONFIG.candidateSearchCostCents);
     expect(state.ledger.some((e) => e.category === "opex_recruiting" && e.amount === HIRING_CONFIG.candidateSearchCostCents)).toBe(true);
-    expect(state.ledger.some((e) => e.category === "asset_cash" && e.type === "debit" && e.amount === HIRING_CONFIG.candidateSearchCostCents)).toBe(
-      true,
-    );
+    expect(
+      state.ledger.some((e) => e.category === "asset_cash" && e.type === "debit" && e.amount === HIRING_CONFIG.candidateSearchCostCents),
+    ).toBe(true);
   });
 
   it("refuses the search when cash is insufficient and charges nothing", () => {

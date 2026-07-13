@@ -24,7 +24,13 @@ export function MenuPricingScreen() {
 
   const rows: Row[] = state.menu.map((listing) => {
     const product = PRODUCT_CATALOG.find((p) => p.id === listing.productId)!;
-    return { listing, name: product.name, category: product.category, costCents: baseCostCentsForProduct(state, listing.productId), suggestedPrice: product.suggestedPrice };
+    return {
+      listing,
+      name: product.name,
+      category: product.category,
+      costCents: baseCostCentsForProduct(state, listing.productId),
+      suggestedPrice: product.suggestedPrice,
+    };
   });
 
   const setPriceFromMargin = (productId: string, costCents: number, marginPercent: number) => {
@@ -90,7 +96,7 @@ export function MenuPricingScreen() {
       </div>
       <Card title="Products">
         <p style={{ color: "var(--text-secondary)", marginTop: 0 }}>
-          Recipes and ingredients are fixed — choose which products to offer and set the price customers pay. Suggested prices: {" "}
+          Recipes and ingredients are fixed — choose which products to offer and set the price customers pay. Suggested prices:{" "}
           {PRODUCT_CATALOG.map((p) => `${p.name} ${formatCents(p.suggestedPrice)}`).join(", ")}.
         </p>
         <DataTable columns={columns} rows={rows} rowKey={(r) => r.listing.productId} />

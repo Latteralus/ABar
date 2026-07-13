@@ -153,17 +153,29 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   hireEmployee: runCommand(get, (state, bus, employee: Employee) => commandService.hireEmployee(state, bus, employee)),
   fireEmployee: runCommand(get, (state, bus, employeeId: string) => commandService.fireEmployee(state, bus, employeeId)),
-  setMenuPrice: runCommand(get, (state, _bus, productId: string, priceCents: number) => commandService.setMenuPrice(state, productId, priceCents)),
-  setMenuActive: runCommand(get, (state, _bus, productId: string, isActive: boolean) => commandService.setMenuActive(state, productId, isActive)),
+  setMenuPrice: runCommand(get, (state, _bus, productId: string, priceCents: number) =>
+    commandService.setMenuPrice(state, productId, priceCents),
+  ),
+  setMenuActive: runCommand(get, (state, _bus, productId: string, isActive: boolean) =>
+    commandService.setMenuActive(state, productId, isActive),
+  ),
   placePurchaseOrder: runCommand(get, (state, bus, lines: PurchaseOrderLine[], payment: "cash" | "tab") =>
     commandService.placePurchaseOrder(state, bus, lines, payment),
   ),
   payBill: runCommand(get, (state, bus, billId: string) => commandService.payBill(state, bus, billId)),
   makeLoanPayment: runCommand(get, (state, bus, amount: number) => commandService.makeLoanPayment(state, bus, amount)),
-  purchaseEquipment: runCommand(get, (state, bus, equipmentCatalogId: string) => commandService.purchaseEquipment(state, bus, equipmentCatalogId)),
-  requestContractRepair: runCommand(get, (state, bus, equipmentId: string) => commandService.requestContractRepair(state, bus, equipmentId)),
-  purchaseAttraction: runCommand(get, (state, bus, attractionCatalogId: string) => commandService.purchaseAttraction(state, bus, attractionCatalogId)),
-  setAttractionPrice: runCommand(get, (state, _bus, attractionId: string, priceCents: number) => commandService.setAttractionPrice(state, attractionId, priceCents)),
+  purchaseEquipment: runCommand(get, (state, bus, equipmentCatalogId: string) =>
+    commandService.purchaseEquipment(state, bus, equipmentCatalogId),
+  ),
+  requestContractRepair: runCommand(get, (state, bus, equipmentId: string) =>
+    commandService.requestContractRepair(state, bus, equipmentId),
+  ),
+  purchaseAttraction: runCommand(get, (state, bus, attractionCatalogId: string) =>
+    commandService.purchaseAttraction(state, bus, attractionCatalogId),
+  ),
+  setAttractionPrice: runCommand(get, (state, _bus, attractionId: string, priceCents: number) =>
+    commandService.setAttractionPrice(state, attractionId, priceCents),
+  ),
   requestAttractionContractRepair: runCommand(get, (state, bus, attractionId: string) =>
     commandService.requestAttractionContractRepair(state, bus, attractionId),
   ),

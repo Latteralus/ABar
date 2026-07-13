@@ -31,7 +31,13 @@ export function customerSpentSoFar(state: GameState, customer: Customer): number
  * Closes a customer's tab: computes tax/tip, splits the card fee if applicable, posts ledger
  * entries, and produces a receipt (Master Plan Sections 26-27).
  */
-export function closeTabAndPay(state: GameState, rng: SeededRandom, bus: EventBus, customer: Customer, servingEmployee: Employee | null): void {
+export function closeTabAndPay(
+  state: GameState,
+  rng: SeededRandom,
+  bus: EventBus,
+  customer: Customer,
+  servingEmployee: Employee | null,
+): void {
   const tab = state.tabs.find((t) => t.id === customer.tabId);
   if (!tab) return;
 
@@ -71,17 +77,53 @@ export function closeTabAndPay(state: GameState, rng: SeededRandom, bus: EventBu
   customer.totalSpent += total;
 
   if (drinkSubtotal > 0) {
-    postLedger(state, { category: "revenue_drink_sales", type: "credit", amount: drinkSubtotal, description: `Drink sales — tab #${tab.tabNumber}`, relatedEntityId: tab.id });
+    postLedger(state, {
+      category: "revenue_drink_sales",
+      type: "credit",
+      amount: drinkSubtotal,
+      description: `Drink sales — tab #${tab.tabNumber}`,
+      relatedEntityId: tab.id,
+    });
   }
   if (foodSubtotal > 0) {
-    postLedger(state, { category: "revenue_food_sales", type: "credit", amount: foodSubtotal, description: `Food sales — tab #${tab.tabNumber}`, relatedEntityId: tab.id });
+    postLedger(state, {
+      category: "revenue_food_sales",
+      type: "credit",
+      amount: foodSubtotal,
+      description: `Food sales — tab #${tab.tabNumber}`,
+      relatedEntityId: tab.id,
+    });
   }
-  postLedger(state, { category: "liability_sales_tax_payable", type: "credit", amount: tax, description: `Sales tax collected — tab #${tab.tabNumber}`, relatedEntityId: tab.id });
-  postLedger(state, { category: "revenue_bar_tip_share", type: "credit", amount: barTipShare, description: `Bar share of tip — tab #${tab.tabNumber}`, relatedEntityId: tab.id });
+  postLedger(state, {
+    category: "liability_sales_tax_payable",
+    type: "credit",
+    amount: tax,
+    description: `Sales tax collected — tab #${tab.tabNumber}`,
+    relatedEntityId: tab.id,
+  });
+  postLedger(state, {
+    category: "revenue_bar_tip_share",
+    type: "credit",
+    amount: barTipShare,
+    description: `Bar share of tip — tab #${tab.tabNumber}`,
+    relatedEntityId: tab.id,
+  });
   if (cardFee > 0) {
-    postLedger(state, { category: "opex_card_processing_fee", type: "debit", amount: cardFee, description: `Card processing fee — tab #${tab.tabNumber}`, relatedEntityId: tab.id });
+    postLedger(state, {
+      category: "opex_card_processing_fee",
+      type: "debit",
+      amount: cardFee,
+      description: `Card processing fee — tab #${tab.tabNumber}`,
+      relatedEntityId: tab.id,
+    });
   }
-  postLedger(state, { category: "asset_cash", type: "credit", amount: netCashChange, description: `Cash received — tab #${tab.tabNumber}`, relatedEntityId: tab.id });
+  postLedger(state, {
+    category: "asset_cash",
+    type: "credit",
+    amount: netCashChange,
+    description: `Cash received — tab #${tab.tabNumber}`,
+    relatedEntityId: tab.id,
+  });
 
   // Section 24: "Employee tip allocation may be simplified initially as an even split among
   // working employees" — everyone hired works every operating day, so that's just state.employees.
@@ -118,5 +160,12 @@ export function closeTabAndPay(state: GameState, rng: SeededRandom, bus: EventBu
   state.receipts.push(receipt);
 
   bus.emit("tab:closed", { tab });
-  logActivity(state, bus, "sale", `${customer.firstName} ${customer.lastName} paid tab #${tab.tabNumber} (${formatCents(total)}).`, "info", tab.id);
+  logActivity(
+    state,
+    bus,
+    "sale",
+    `${customer.firstName} ${customer.lastName} paid tab #${tab.tabNumber} (${formatCents(total)}).`,
+    "info",
+    tab.id,
+  );
 }

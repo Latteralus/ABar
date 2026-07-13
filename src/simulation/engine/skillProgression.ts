@@ -15,7 +15,10 @@ export function applyShiftProgression(employee: Employee): void {
   const lifetimeTasks = employee.performance.customersServed + employee.performance.itemsPrepared + employee.performance.ordersFulfilled;
   const experienceFactor = Math.min(
     SKILL_PROGRESSION_CONFIG.maxActivityFactor,
-    Math.max(SKILL_PROGRESSION_CONFIG.minActivityFactor, lifetimeTasks / (employee.shiftsWorked * SKILL_PROGRESSION_CONFIG.fullActivityTaskCount)),
+    Math.max(
+      SKILL_PROGRESSION_CONFIG.minActivityFactor,
+      lifetimeTasks / (employee.shiftsWorked * SKILL_PROGRESSION_CONFIG.fullActivityTaskCount),
+    ),
   );
 
   const primarySkills = EMPLOYEE_ROLE_CONFIG[employee.role].primarySkills as (keyof EmployeeSkills)[];

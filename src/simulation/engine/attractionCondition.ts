@@ -25,11 +25,25 @@ export function applyDailyAttractionWear(state: GameState, bus: EventBus): void 
     if (attraction.condition < ATTRACTION_CONFIG.degradedConditionThreshold) {
       if (wasOperational) {
         attraction.currentStatus = "degraded";
-        logActivity(state, bus, "attraction", `${attraction.name} condition dropped below ${ATTRACTION_CONFIG.degradedConditionThreshold}%.`, "warning", attraction.id);
+        logActivity(
+          state,
+          bus,
+          "attraction",
+          `${attraction.name} condition dropped below ${ATTRACTION_CONFIG.degradedConditionThreshold}%.`,
+          "warning",
+          attraction.id,
+        );
       }
       if (attraction.condition <= 0) {
         attraction.currentStatus = "failed";
-        logActivity(state, bus, "attraction", `${attraction.name} was taken out of service due to a damaged cue.`, "critical", attraction.id);
+        logActivity(
+          state,
+          bus,
+          "attraction",
+          `${attraction.name} was taken out of service due to a damaged cue.`,
+          "critical",
+          attraction.id,
+        );
       }
     }
   }

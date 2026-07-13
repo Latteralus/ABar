@@ -13,7 +13,9 @@ export function ensureSeatingTasks(state: GameState): void {
   if (seatedCount >= property.seatingCapacity) return;
 
   const hasTaskFor = (customerId: string) =>
-    state.tasks.some((t) => t.customerId === customerId && t.type === "seat_customer" && t.status !== "complete" && t.status !== "cancelled");
+    state.tasks.some(
+      (t) => t.customerId === customerId && t.type === "seat_customer" && t.status !== "complete" && t.status !== "cancelled",
+    );
 
   for (const customer of state.customers) {
     if (customer.status !== "waiting_for_seat" || hasTaskFor(customer.id)) continue;

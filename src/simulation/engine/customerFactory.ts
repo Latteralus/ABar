@@ -8,9 +8,7 @@ import type { Customer, GameMinute } from "@/types";
 
 export function generateCustomer(rng: SeededRandom, arrivalMinute: GameMinute, groupId: string | null): Customer {
   const archetype = rng.pick(CUSTOMER_ARCHETYPES);
-  const budget = Math.round(
-    CUSTOMER_BEHAVIOR_CONFIG.baseSpendingBudgetCents * archetype.budgetMultiplier * rng.float(0.7, 1.3),
-  );
+  const budget = Math.round(CUSTOMER_BEHAVIOR_CONFIG.baseSpendingBudgetCents * archetype.budgetMultiplier * rng.float(0.7, 1.3));
 
   return {
     id: createId("cust"),

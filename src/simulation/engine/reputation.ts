@@ -63,7 +63,8 @@ function computeDailyFactors(state: GameState, report: DailyReport): Factor[] {
 
   if (state.employees.length > 0) {
     const avgSkill =
-      state.employees.reduce((sum, e) => sum + (e.skills.accuracy + e.skills.charisma + e.skills.bartending) / 3, 0) / state.employees.length;
+      state.employees.reduce((sum, e) => sum + (e.skills.accuracy + e.skills.charisma + e.skills.bartending) / 3, 0) /
+      state.employees.length;
     if (avgSkill >= 75) {
       factors.push({ label: "Skilled, personable staff", delta: 1 });
     } else if (avgSkill <= 35) {
@@ -83,8 +84,14 @@ export function updateReputation(state: GameState, bus: EventBus, report: DailyR
   const previousScore = state.reputation.score;
   state.reputation.score = clampRound(previousScore + appliedDelta);
 
-  const positiveFactors = factors.filter((f) => f.delta > 0).sort((a, b) => b.delta - a.delta).map((f) => f.label);
-  const negativeFactors = factors.filter((f) => f.delta < 0).sort((a, b) => a.delta - b.delta).map((f) => f.label);
+  const positiveFactors = factors
+    .filter((f) => f.delta > 0)
+    .sort((a, b) => b.delta - a.delta)
+    .map((f) => f.label);
+  const negativeFactors = factors
+    .filter((f) => f.delta < 0)
+    .sort((a, b) => a.delta - b.delta)
+    .map((f) => f.label);
 
   state.reputation.history.push({
     gameDay: report.gameDay,
@@ -95,7 +102,12 @@ export function updateReputation(state: GameState, bus: EventBus, report: DailyR
 
   if (Math.abs(appliedDelta) >= 0.5) {
     const direction = appliedDelta > 0 ? "improved" : "declined";
-    logActivity(state, bus, "reputation", `Reputation ${direction} to ${formatPercent(state.reputation.score)} after Day ${report.gameDay}.`);
+    logActivity(
+      state,
+      bus,
+      "reputation",
+      `Reputation ${direction} to ${formatPercent(state.reputation.score)} after Day ${report.gameDay}.`,
+    );
   }
 }
 
@@ -119,8 +131,13 @@ export function reputationDemandMultiplier(state: GameState): number {
   const score = state.reputation.score;
   if (score <= 50) {
     const t = score / 50;
-    return REPUTATION_CONFIG.demandMultiplierAtZero + t * (REPUTATION_CONFIG.demandMultiplierAtFifty - REPUTATION_CONFIG.demandMultiplierAtZero);
+    return (
+      REPUTATION_CONFIG.demandMultiplierAtZero + t * (REPUTATION_CONFIG.demandMultiplierAtFifty - REPUTATION_CONFIG.demandMultiplierAtZero)
+    );
   }
   const t = (score - 50) / 50;
-  return REPUTATION_CONFIG.demandMultiplierAtFifty + t * (REPUTATION_CONFIG.demandMultiplierAtHundred - REPUTATION_CONFIG.demandMultiplierAtFifty);
+  return (
+    REPUTATION_CONFIG.demandMultiplierAtFifty +
+    t * (REPUTATION_CONFIG.demandMultiplierAtHundred - REPUTATION_CONFIG.demandMultiplierAtFifty)
+  );
 }

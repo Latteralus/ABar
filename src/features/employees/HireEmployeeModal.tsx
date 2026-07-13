@@ -61,7 +61,16 @@ export function HireEmployeeModal() {
       {candidates.length > 0 && (
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           {candidates.map((candidate) => (
-            <div key={candidate.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+            <div
+              key={candidate.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 0",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
               <div>
                 <strong>
                   {candidate.firstName} {candidate.lastName}

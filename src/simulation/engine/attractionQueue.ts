@@ -26,7 +26,13 @@ export function estimateAttractionWaitMinutes(attraction: Attraction, gameDurati
 }
 
 /** Joins the queue if there's room; returns false (caller should treat as "didn't join") if the queue is already at capacity. */
-export function joinAttractionQueue(state: GameState, bus: EventBus, attraction: Attraction, customerIds: EntityId[], groupId: EntityId | null): boolean {
+export function joinAttractionQueue(
+  state: GameState,
+  bus: EventBus,
+  attraction: Attraction,
+  customerIds: EntityId[],
+  groupId: EntityId | null,
+): boolean {
   const catalogEntry = getAttractionCatalogEntryForCategory(attraction.category);
   if (attraction.queue.length >= catalogEntry.queueCapacityParties) return false;
 
@@ -38,7 +44,14 @@ export function joinAttractionQueue(state: GameState, bus: EventBus, attraction:
       customer.statusEnteredAtGameMinute = state.gameMinute;
     }
   }
-  logActivity(state, bus, "attraction", `${attractionLabel(state, customerIds, groupId)} joined the ${attraction.name} queue.`, "info", attraction.id);
+  logActivity(
+    state,
+    bus,
+    "attraction",
+    `${attractionLabel(state, customerIds, groupId)} joined the ${attraction.name} queue.`,
+    "info",
+    attraction.id,
+  );
   return true;
 }
 

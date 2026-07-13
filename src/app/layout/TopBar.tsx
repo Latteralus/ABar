@@ -31,7 +31,9 @@ export function TopBar() {
           </button>
         )}
         {state.isPaused && <Badge variant="warning">Paused</Badge>}
-        {state.insolvency && <Badge variant="negative">Bankruptcy in {Math.max(0, state.insolvency.bankruptcyGameDay - state.gameDay)} days</Badge>}
+        {state.insolvency && (
+          <Badge variant="negative">Bankruptcy in {Math.max(0, state.insolvency.bankruptcyGameDay - state.gameDay)} days</Badge>
+        )}
       </div>
       <div className="clock-cluster">
         <span>Cash: {formatCents(state.cash)}</span>

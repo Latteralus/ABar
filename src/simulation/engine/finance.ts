@@ -50,9 +50,7 @@ export function accrueDailyPayroll(state: GameState, bus?: EventBus): number {
 }
 
 function outstandingLedgerBalance(state: GameState, category: LedgerCategory): number {
-  return state.ledger
-    .filter((e) => e.category === category)
-    .reduce((sum, e) => sum + (e.type === "credit" ? e.amount : -e.amount), 0);
+  return state.ledger.filter((e) => e.category === category).reduce((sum, e) => sum + (e.type === "credit" ? e.amount : -e.amount), 0);
 }
 
 function addWeeklyExpenseBill(
@@ -103,19 +101,43 @@ function runSundayBilling(state: GameState, bus: EventBus): void {
 
   const salesTaxDue = outstandingLedgerBalance(state, "liability_sales_tax_payable");
   if (salesTaxDue > 0 && !outstandingBills(state).some((b) => b.kind === "sales_tax")) {
-    addBill(state, { kind: "sales_tax", description: `Sales tax remittance — Day ${state.gameDay}`, amount: salesTaxDue, dueGameDay: state.gameDay });
+    addBill(state, {
+      kind: "sales_tax",
+      description: `Sales tax remittance — Day ${state.gameDay}`,
+      amount: salesTaxDue,
+      dueGameDay: state.gameDay,
+    });
   }
 
   if (state.loan && state.loan.remainingBalance > 0 && state.gameDay >= state.loan.nextDueGameDay) {
-    const weeklyInterest = Math.round(state.loan.remainingBalance * (state.loan.annualInterestRatePercent / 100 / 365) * state.loan.paymentFrequencyDays);
+    const weeklyInterest = Math.round(
+      state.loan.remainingBalance * (state.loan.annualInterestRatePercent / 100 / 365) * state.loan.paymentFrequencyDays,
+    );
     state.loan.interestAccrued += weeklyInterest;
-    if (weeklyInterest > 0) postLedger(state, { category: "opex_loan_interest", type: "debit", amount: weeklyInterest, description: `Loan interest accrued — Day ${state.gameDay}` });
-    const amount = Math.min(state.loan.remainingBalance + state.loan.interestAccrued, state.loan.minimumPayment + state.loan.interestAccrued);
-    addBill(state, { kind: "loan", description: `Startup loan payment — Day ${state.gameDay}`, amount, dueGameDay: state.gameDay, relatedEntityId: state.loan.id });
+    if (weeklyInterest > 0)
+      postLedger(state, {
+        category: "opex_loan_interest",
+        type: "debit",
+        amount: weeklyInterest,
+        description: `Loan interest accrued — Day ${state.gameDay}`,
+      });
+    const amount = Math.min(
+      state.loan.remainingBalance + state.loan.interestAccrued,
+      state.loan.minimumPayment + state.loan.interestAccrued,
+    );
+    addBill(state, {
+      kind: "loan",
+      description: `Startup loan payment — Day ${state.gameDay}`,
+      amount,
+      dueGameDay: state.gameDay,
+      relatedEntityId: state.loan.id,
+    });
     state.loan.nextDueGameDay += state.loan.paymentFrequencyDays;
   }
 
-  const due = outstandingBills(state).filter((b) => b.dueGameDay <= state.gameDay).reduce((sum, b) => sum + b.amount, 0);
+  const due = outstandingBills(state)
+    .filter((b) => b.dueGameDay <= state.gameDay)
+    .reduce((sum, b) => sum + b.amount, 0);
   if (due > 0) logActivity(state, bus, "finance", `Sunday bills are due: ${formatCents(due)}.`, "warning");
 }
 
@@ -169,8 +191,21 @@ export function payBill(state: GameState, bus: EventBus, billId: string): { succ
     state.loan.remainingBalance -= principalPaid;
     state.loan.paymentHistory.push({ gameMinute: state.gameMinute, amount: bill.amount });
     state.cash -= bill.amount;
-    if (principalPaid > 0) postLedger(state, { category: "liability_loan", type: "debit", amount: principalPaid, description: bill.description, relatedEntityId: state.loan.id });
-    postLedger(state, { category: "asset_cash", type: "debit", amount: bill.amount, description: `${bill.description} paid`, relatedEntityId: state.loan.id });
+    if (principalPaid > 0)
+      postLedger(state, {
+        category: "liability_loan",
+        type: "debit",
+        amount: principalPaid,
+        description: bill.description,
+        relatedEntityId: state.loan.id,
+      });
+    postLedger(state, {
+      category: "asset_cash",
+      type: "debit",
+      amount: bill.amount,
+      description: `${bill.description} paid`,
+      relatedEntityId: state.loan.id,
+    });
   } else {
     const liabilityCategory = liabilityCategoryForBill(bill.kind) ?? undefined;
     spendCash(state, bill.amount, { category: liabilityCategory, description: `${bill.description} paid`, relatedEntityId: bill.id });
@@ -196,7 +231,14 @@ export function updateInsolvency(state: GameState, bus?: EventBus): void {
   }
   if (!state.insolvency) {
     state.insolvency = { startedGameDay: state.gameDay, bankruptcyGameDay: state.gameDay + FINANCE_CONFIG.insolvencyGraceDays };
-    if (bus) logActivity(state, bus, "finance", `Cash is negative. Bankruptcy in ${FINANCE_CONFIG.insolvencyGraceDays} days unless cash recovers.`, "warning");
+    if (bus)
+      logActivity(
+        state,
+        bus,
+        "finance",
+        `Cash is negative. Bankruptcy in ${FINANCE_CONFIG.insolvencyGraceDays} days unless cash recovers.`,
+        "warning",
+      );
   }
   if (state.gameDay >= state.insolvency.bankruptcyGameDay) {
     state.dayState = "bankrupt";

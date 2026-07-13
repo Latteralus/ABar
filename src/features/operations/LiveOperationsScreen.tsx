@@ -42,7 +42,10 @@ export function LiveOperationsScreen() {
       <Card>
         <div className="card-grid">
           <StatTile label="Customers" value={`${activeCustomers.length} / ${property.customerCapacity}`} />
-          <StatTile label="Available Seats" value={`${Math.max(0, property.seatingCapacity - seatedCount)} / ${property.seatingCapacity}`} />
+          <StatTile
+            label="Available Seats"
+            value={`${Math.max(0, property.seatingCapacity - seatedCount)} / ${property.seatingCapacity}`}
+          />
           <StatTile label="Standing / Waiting" value={`${Math.min(unseatedCount, standingCapacity)} / ${standingCapacity}`} />
           <StatTile label="Waiting" value={`${waitingCount}`} />
           <StatTile label="Revenue Today" value={formatCents(today.revenue)} />

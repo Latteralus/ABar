@@ -14,7 +14,17 @@ function employee(id: string, wagePerShiftCents: number): Employee {
     role: "bartender",
     wagePerShiftCents,
     personality: [],
-    skills: { bartending: 50, serving: 50, cooking: 50, speed: 50, accuracy: 50, charisma: 50, cleanliness: 50, security: 50, management: 50 },
+    skills: {
+      bartending: 50,
+      serving: 50,
+      cooking: 50,
+      speed: 50,
+      accuracy: 50,
+      charisma: 50,
+      cleanliness: 50,
+      security: 50,
+      management: 50,
+    },
     shiftsWorked: 0,
     hiredAtGameMinute: 0,
     currentTaskId: null,
@@ -49,7 +59,15 @@ describe("Stage 5 finance", () => {
   it("generates Sunday lease, utility, sales tax, and loan bills", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
     state.gameDay = 7;
-    state.ledger.push({ id: "tax", gameDay: 7, gameMinute: 0, category: "liability_sales_tax_payable", type: "credit", amount: 825, description: "tax" });
+    state.ledger.push({
+      id: "tax",
+      gameDay: 7,
+      gameMinute: 0,
+      category: "liability_sales_tax_payable",
+      type: "credit",
+      amount: 825,
+      description: "tax",
+    });
 
     generateSundayBills(state, new EventBus());
 
@@ -71,12 +89,19 @@ describe("Stage 5 finance", () => {
     expect(result.success).toBe(true);
     expect(bill.status).toBe("paid");
     expect(state.cash).toBe(50_000 - bill.amount);
-    expect(state.ledger.some((e) => e.category === "liability_accrued_payroll" && e.type === "debit" && e.amount === bill.amount)).toBe(true);
+    expect(state.ledger.some((e) => e.category === "liability_accrued_payroll" && e.type === "debit" && e.amount === bill.amount)).toBe(
+      true,
+    );
   });
 
   it("creates supply-tab bills when purchase orders are placed on tab", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    const result = commandService.placePurchaseOrder(state, new EventBus(), [{ inventoryItemId: "inv-bottled-lager", quantity: 1, unitCost: 100 }], "tab");
+    const result = commandService.placePurchaseOrder(
+      state,
+      new EventBus(),
+      [{ inventoryItemId: "inv-bottled-lager", quantity: 1, unitCost: 100 }],
+      "tab",
+    );
 
     expect(result.success).toBe(true);
     expect(state.bills.some((b) => b.kind === "supply_tab" && b.amount === 100)).toBe(true);
@@ -94,7 +119,9 @@ describe("Stage 5 finance", () => {
     accrueDailyPayroll(state, bus);
     payBill(state, bus, state.bills[0].id);
 
-    const reconciledCash = state.ledger.filter((e) => e.category === "asset_cash").reduce((sum, e) => sum + (e.type === "credit" ? e.amount : -e.amount), 0);
+    const reconciledCash = state.ledger
+      .filter((e) => e.category === "asset_cash")
+      .reduce((sum, e) => sum + (e.type === "credit" ? e.amount : -e.amount), 0);
     expect(reconciledCash).toBe(state.cash);
   });
 

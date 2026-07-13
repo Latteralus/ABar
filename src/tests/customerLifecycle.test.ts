@@ -88,7 +88,12 @@ describe("deciding_next_order with an empty tab (stockout audit fix)", () => {
   it("departs a customer whose only order(s) failed to prepare instead of routing them through payment for $0", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     const bus = new EventBus();
-    const rng = { chance: () => false, next: () => 0.99, pick: (arr: readonly unknown[]) => arr[0], int: () => 0 } as unknown as SeededRandom;
+    const rng = {
+      chance: () => false,
+      next: () => 0.99,
+      pick: (arr: readonly unknown[]) => arr[0],
+      int: () => 0,
+    } as unknown as SeededRandom;
     const customer: Customer = {
       id: "cust-1",
       firstName: "Nora",
@@ -145,7 +150,12 @@ describe("deciding_next_order with an empty tab (stockout audit fix)", () => {
   it("still routes a customer with a real delivered item through normal payment", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     const bus = new EventBus();
-    const rng = { chance: () => false, next: () => 0.99, pick: (arr: readonly unknown[]) => arr[0], int: () => 0 } as unknown as SeededRandom;
+    const rng = {
+      chance: () => false,
+      next: () => 0.99,
+      pick: (arr: readonly unknown[]) => arr[0],
+      int: () => 0,
+    } as unknown as SeededRandom;
     const customer = makePaidCustomer(state);
     customer.status = "deciding_next_order";
     customer.phaseTargetMinutes = 0;
@@ -157,7 +167,9 @@ describe("deciding_next_order with an empty tab (stockout audit fix)", () => {
       groupId: null,
       openedAtGameMinute: 0,
       closedAtGameMinute: null,
-      lineItems: [{ productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 500, preparedByEmployeeId: null }],
+      lineItems: [
+        { productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 500, preparedByEmployeeId: null },
+      ],
       subtotal: 0,
       tax: 0,
       tip: 0,

@@ -64,7 +64,12 @@ describe("socializing (deciding_next_order) phase", () => {
     const bus = new EventBus();
     // chance() always true would normally force a reorder instantly if rolled per-minute;
     // this proves the decision is gated behind the phaseTargetMinutes window, not re-rolled every minute.
-    const alwaysTrueRng = { chance: () => true, next: () => 0.01, pick: (arr: readonly unknown[]) => arr[0], int: () => 0 } as unknown as SeededRandom;
+    const alwaysTrueRng = {
+      chance: () => true,
+      next: () => 0.01,
+      pick: (arr: readonly unknown[]) => arr[0],
+      int: () => 0,
+    } as unknown as SeededRandom;
     const customer = makeCustomer({ status: "deciding_next_order", phaseTargetMinutes: 8, statusEnteredAtGameMinute: 0 });
     state.customers.push(customer);
 
@@ -76,7 +81,12 @@ describe("socializing (deciding_next_order) phase", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     const bus = new EventBus();
     const rng = new SeededRandom(1);
-    const customer = makeCustomer({ status: "deciding_next_order", phaseTargetMinutes: 20, satisfaction: 50, statusEnteredAtGameMinute: 0 });
+    const customer = makeCustomer({
+      status: "deciding_next_order",
+      phaseTargetMinutes: 20,
+      satisfaction: 50,
+      statusEnteredAtGameMinute: 0,
+    });
     state.customers.push(customer);
 
     tick(state, rng, bus, 5);
@@ -86,7 +96,12 @@ describe("socializing (deciding_next_order) phase", () => {
   it("respects the max-visit-minutes cap and refuses to reorder past it", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     const bus = new EventBus();
-    const alwaysTrueRng = { chance: () => true, next: () => 0.01, pick: (arr: readonly unknown[]) => arr[0], int: () => 0 } as unknown as SeededRandom;
+    const alwaysTrueRng = {
+      chance: () => true,
+      next: () => 0.01,
+      pick: (arr: readonly unknown[]) => arr[0],
+      int: () => 0,
+    } as unknown as SeededRandom;
     const customer = makeCustomer({
       status: "deciding_next_order",
       phaseTargetMinutes: 1,
@@ -105,7 +120,9 @@ describe("socializing (deciding_next_order) phase", () => {
       groupId: null,
       openedAtGameMinute: 0,
       closedAtGameMinute: null,
-      lineItems: [{ productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 500, preparedByEmployeeId: null }],
+      lineItems: [
+        { productId: "prod-bottled-lager", productName: "Bottled Lager", quantity: 1, unitPrice: 500, preparedByEmployeeId: null },
+      ],
       subtotal: 0,
       tax: 0,
       tip: 0,
@@ -123,7 +140,12 @@ describe("socializing (deciding_next_order) phase", () => {
   it("does roll toward another round when well within the visit cap and chance favors it", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     const bus = new EventBus();
-    const alwaysTrueRng = { chance: () => true, next: () => 0.01, pick: (arr: readonly unknown[]) => arr[0], int: () => 0 } as unknown as SeededRandom;
+    const alwaysTrueRng = {
+      chance: () => true,
+      next: () => 0.01,
+      pick: (arr: readonly unknown[]) => arr[0],
+      int: () => 0,
+    } as unknown as SeededRandom;
     const customer = makeCustomer({
       status: "deciding_next_order",
       phaseTargetMinutes: 1,

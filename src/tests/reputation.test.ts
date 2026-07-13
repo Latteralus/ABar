@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
 import { EventBus } from "@/simulation/events/EventBus";
-import { updateReputation, reputationDailyChange, reputationWeeklyChange, reputationDemandMultiplier } from "@/simulation/engine/reputation";
+import {
+  updateReputation,
+  reputationDailyChange,
+  reputationWeeklyChange,
+  reputationDemandMultiplier,
+} from "@/simulation/engine/reputation";
 import type { DailyReport } from "@/types";
 
 function report(overrides: Partial<DailyReport> = {}): DailyReport {
@@ -58,7 +63,13 @@ describe("reputation", () => {
       updateReputation(
         state,
         new EventBus(),
-        report({ gameDay: day, averageWaitMinutes: 60, averageSatisfaction: 5, customersLost: 20, lossReasons: { removed_intoxication: 20 } }),
+        report({
+          gameDay: day,
+          averageWaitMinutes: 60,
+          averageSatisfaction: 5,
+          customersLost: 20,
+          lossReasons: { removed_intoxication: 20 },
+        }),
       );
     }
     expect(state.reputation.score).toBeGreaterThanOrEqual(0);
@@ -68,7 +79,11 @@ describe("reputation", () => {
   it("records positive/negative factor labels and derives daily/weekly change from history", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     updateReputation(state, new EventBus(), report({ gameDay: 1, averageSatisfaction: 90, averageWaitMinutes: 2, customersLost: 0 }));
-    updateReputation(state, new EventBus(), report({ gameDay: 2, averageSatisfaction: 10, averageWaitMinutes: 50, customersLost: 10, lossReasons: { wait_too_long: 10 } }));
+    updateReputation(
+      state,
+      new EventBus(),
+      report({ gameDay: 2, averageSatisfaction: 10, averageWaitMinutes: 50, customersLost: 10, lossReasons: { wait_too_long: 10 } }),
+    );
 
     expect(state.reputation.history).toHaveLength(2);
     expect(state.reputation.history[0].positiveFactors.length).toBeGreaterThan(0);

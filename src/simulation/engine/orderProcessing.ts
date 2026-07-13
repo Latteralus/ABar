@@ -33,7 +33,8 @@ export function hasRequiredEquipment(state: GameState, productId: string): boole
 function selectProductForCustomer(state: GameState, customer: Customer, rng: SeededRandom, allowAlcohol: boolean): MenuListing | null {
   const activeMenu = getActiveMenu(state);
   const affordable = activeMenu.filter((listing) => {
-    if (effectivePrice(state, listing.productId, listing.price) > customer.spendingBudget - customerSpentSoFar(state, customer)) return false;
+    if (effectivePrice(state, listing.productId, listing.price) > customer.spendingBudget - customerSpentSoFar(state, customer))
+      return false;
     if (!allowAlcohol && ALCOHOLIC_PRODUCT_IDS.has(listing.productId)) return false;
     if (!hasRequiredEquipment(state, listing.productId)) return false;
     return true;

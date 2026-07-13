@@ -47,7 +47,15 @@ export function FinancialsScreen() {
     { key: "num", header: "Receipt #", render: (r) => `#${r.receiptNumber}` },
     { key: "customer", header: "Customer", render: (r) => r.customerName },
     { key: "total", header: "Total", render: (r) => formatCents(r.total) },
-    { key: "view", header: "", render: (r) => <button className="btn" onClick={() => setSelectedReceiptId(r.id)}>View</button> },
+    {
+      key: "view",
+      header: "",
+      render: (r) => (
+        <button className="btn" onClick={() => setSelectedReceiptId(r.id)}>
+          View
+        </button>
+      ),
+    },
   ];
 
   const billColumns: DataTableColumn<Bill>[] = [
@@ -56,7 +64,15 @@ export function FinancialsScreen() {
     { key: "desc", header: "Description", render: (b) => b.description },
     { key: "status", header: "Status", render: (b) => b.status },
     { key: "amount", header: "Amount", render: (b) => formatCents(b.amount) },
-    { key: "pay", header: "", render: (b) => <button className="btn" onClick={() => payBill(b.id)}>Pay</button> },
+    {
+      key: "pay",
+      header: "",
+      render: (b) => (
+        <button className="btn" onClick={() => payBill(b.id)}>
+          Pay
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -72,7 +88,11 @@ export function FinancialsScreen() {
           <StatTile label="Gross Profit" value={formatCents(today.grossProfit)} tone={today.grossProfit >= 0 ? "positive" : "negative"} />
           <StatTile label="Operating Expenses" value={formatCents(today.operatingExpenses)} />
           <StatTile label="Net Profit" value={formatCents(today.netProfit)} tone={today.netProfit >= 0 ? "positive" : "negative"} />
-          <StatTile label="Open Bills" value={formatCents(outstandingBillTotal(state))} tone={outstandingBillTotal(state) > 0 ? "negative" : "neutral"} />
+          <StatTile
+            label="Open Bills"
+            value={formatCents(outstandingBillTotal(state))}
+            tone={outstandingBillTotal(state) > 0 ? "negative" : "neutral"}
+          />
           <StatTile label="Loan Balance" value={formatCents(state.loan?.remainingBalance ?? 0)} />
         </div>
       </Card>
@@ -135,11 +155,17 @@ export function FinancialsScreen() {
         </div>
         <div className="card-grid" style={{ marginTop: 12 }}>
           <StatTile label="Owner Capital" value={formatCents(balanceSheet.ownerCapital)} />
-          <StatTile label="Retained Earnings" value={formatCents(balanceSheet.retainedEarnings)} tone={balanceSheet.retainedEarnings >= 0 ? "positive" : "negative"} />
+          <StatTile
+            label="Retained Earnings"
+            value={formatCents(balanceSheet.retainedEarnings)}
+            tone={balanceSheet.retainedEarnings >= 0 ? "positive" : "negative"}
+          />
           <StatTile label="Total Equity" value={formatCents(balanceSheet.totalEquity)} />
         </div>
         <p style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 8 }}>
-          Assets ({formatCents(balanceSheet.totalAssets)}) = Liabilities ({formatCents(balanceSheet.totalLiabilities)}) + Equity ({formatCents(balanceSheet.totalEquity)}) — balances by construction; Retained Earnings is whatever equity is left over after Owner Capital.
+          Assets ({formatCents(balanceSheet.totalAssets)}) = Liabilities ({formatCents(balanceSheet.totalLiabilities)}) + Equity (
+          {formatCents(balanceSheet.totalEquity)}) — balances by construction; Retained Earnings is whatever equity is left over after Owner
+          Capital.
         </p>
       </Card>
 
@@ -158,10 +184,26 @@ export function FinancialsScreen() {
       >
         <div className="card-grid">
           <StatTile label="Beginning Cash" value={formatCents(cashFlow.beginningCash)} />
-          <StatTile label="Operating" value={formatCents(cashFlow.operatingCashFlow)} tone={cashFlow.operatingCashFlow >= 0 ? "positive" : "negative"} />
-          <StatTile label="Investing" value={formatCents(cashFlow.investingCashFlow)} tone={cashFlow.investingCashFlow >= 0 ? "positive" : "negative"} />
-          <StatTile label="Financing" value={formatCents(cashFlow.financingCashFlow)} tone={cashFlow.financingCashFlow >= 0 ? "positive" : "negative"} />
-          <StatTile label="Net Cash Flow" value={formatCents(cashFlow.netCashFlow)} tone={cashFlow.netCashFlow >= 0 ? "positive" : "negative"} />
+          <StatTile
+            label="Operating"
+            value={formatCents(cashFlow.operatingCashFlow)}
+            tone={cashFlow.operatingCashFlow >= 0 ? "positive" : "negative"}
+          />
+          <StatTile
+            label="Investing"
+            value={formatCents(cashFlow.investingCashFlow)}
+            tone={cashFlow.investingCashFlow >= 0 ? "positive" : "negative"}
+          />
+          <StatTile
+            label="Financing"
+            value={formatCents(cashFlow.financingCashFlow)}
+            tone={cashFlow.financingCashFlow >= 0 ? "positive" : "negative"}
+          />
+          <StatTile
+            label="Net Cash Flow"
+            value={formatCents(cashFlow.netCashFlow)}
+            tone={cashFlow.netCashFlow >= 0 ? "positive" : "negative"}
+          />
           <StatTile label="Ending Cash" value={formatCents(cashFlow.endingCash)} />
         </div>
       </Card>

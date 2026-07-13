@@ -19,8 +19,8 @@ export function SettingsScreen() {
       <Card title="Operations">
         <div className="form-row">
           <label>
-            <input type="checkbox" checked={state.autoOpenEnabled} onChange={(e) => setAutoOpen(e.target.checked)} /> Automatically open the bar at
-            the start of each day
+            <input type="checkbox" checked={state.autoOpenEnabled} onChange={(e) => setAutoOpen(e.target.checked)} /> Automatically open the
+            bar at the start of each day
           </label>
         </div>
       </Card>

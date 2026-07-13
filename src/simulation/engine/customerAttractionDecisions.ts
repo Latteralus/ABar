@@ -23,7 +23,8 @@ function isEligible(customer: Customer): boolean {
  */
 function computeAttractionInterest(customer: Customer, partySize: number, catalogEntry: AttractionCatalogEntry): number {
   let score = customer.attractionAffinity / 100;
-  score *= ATTRACTION_CONFIG.priceTolerancePenaltyFloor + (1 - ATTRACTION_CONFIG.priceTolerancePenaltyFloor) * (customer.priceSensitivity / 100);
+  score *=
+    ATTRACTION_CONFIG.priceTolerancePenaltyFloor + (1 - ATTRACTION_CONFIG.priceTolerancePenaltyFloor) * (customer.priceSensitivity / 100);
   const idealSize = partySize >= catalogEntry.minParticipants && partySize <= catalogEntry.maxParticipants;
   score *= idealSize ? ATTRACTION_CONFIG.idealGroupSizeInterestMultiplier : ATTRACTION_CONFIG.nonIdealGroupSizeInterestMultiplier;
   return Math.max(0, Math.min(1, score));
@@ -44,7 +45,13 @@ function considerAttractions(state: GameState, rng: SeededRandom, bus: EventBus,
     const estimatedWait = estimateAttractionWaitMinutes(attraction, catalogEntry.gameDurationMinutes);
     if (estimatedWait > attractionWaitToleranceMinutes(representative.patience)) continue;
 
-    joinAttractionQueue(state, bus, attraction, party.map((c) => c.id), groupId);
+    joinAttractionQueue(
+      state,
+      bus,
+      attraction,
+      party.map((c) => c.id),
+      groupId,
+    );
     return; // only one attraction exists today, but keep this a "pick one" loop, not "try all of them"
   }
 }
@@ -62,9 +69,7 @@ export function processAttractionDecisions(state: GameState, rng: SeededRandom, 
       decidedGroupIds.add(customer.groupId);
       const group = state.customerGroups.find((g) => g.id === customer.groupId);
       if (!group) continue;
-      const members = group.memberIds
-        .map((id) => state.customers.find((c) => c.id === id))
-        .filter((c): c is Customer => !!c);
+      const members = group.memberIds.map((id) => state.customers.find((c) => c.id === id)).filter((c): c is Customer => !!c);
       if (members.length === 0 || !members.every(isEligible)) continue; // whole group must be free to decide together
       considerAttractions(state, rng, bus, members, customer.groupId);
     } else {

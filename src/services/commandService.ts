@@ -245,10 +245,7 @@ export const commandService = {
     if (state.cash < entry.purchasePrice) return fail("Not enough cash to purchase this attraction.");
 
     const property = getProperty(state.propertyId);
-    const usedFloorSpace = state.attractions.reduce(
-      (sum, a) => sum + getAttractionCatalogEntryForCategory(a.category).floorSpaceUnits,
-      0,
-    );
+    const usedFloorSpace = state.attractions.reduce((sum, a) => sum + getAttractionCatalogEntryForCategory(a.category).floorSpaceUnits, 0);
     if (usedFloorSpace + entry.floorSpaceUnits > property.attractionFloorSpaceUnits) {
       return fail(`Not enough floor space for ${entry.name} — physical space is a hard limit, unlike storage capacity.`);
     }

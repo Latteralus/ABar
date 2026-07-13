@@ -189,7 +189,17 @@ describe("ensureMaintenanceTasks", () => {
       role: "maintenance",
       wagePerShiftCents: 10000,
       personality: [],
-      skills: { bartending: 50, serving: 50, cooking: 50, speed: 50, accuracy: 50, charisma: 50, cleanliness: 50, security: 50, management: 50 },
+      skills: {
+        bartending: 50,
+        serving: 50,
+        cooking: 50,
+        speed: 50,
+        accuracy: 50,
+        charisma: 50,
+        cleanliness: 50,
+        security: 50,
+        management: 50,
+      },
       shiftsWorked: 0,
       hiredAtGameMinute: 0,
       currentTaskId: null,
@@ -226,7 +236,9 @@ describe("contract repair", () => {
 
     expect(result.success).toBe(true);
     expect(state.cash).toBe(cashBefore - MAINTENANCE_CONFIG.contractRepairCostCents);
-    expect(state.ledger.some((l) => l.category === "opex_contract_repair" && l.amount === MAINTENANCE_CONFIG.contractRepairCostCents)).toBe(true);
+    expect(state.ledger.some((l) => l.category === "opex_contract_repair" && l.amount === MAINTENANCE_CONFIG.contractRepairCostCents)).toBe(
+      true,
+    );
     expect(eq.currentStatus).toBe("awaiting_repair");
     expect(eq.contractRepairDueGameDay).toBe(state.gameDay + MAINTENANCE_CONFIG.contractRepairDelayDays);
   });

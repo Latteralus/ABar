@@ -100,7 +100,8 @@ function migrate(envelope: SaveFileEnvelope): GameState {
   if (envelope.version < 7) {
     if (!state.policies) state.policies = { barTipSharePercent: ECONOMY_CONFIG.tips.barSharePercent };
     for (const attraction of state.attractions ?? []) {
-      if (typeof attraction.pricePerGameCents !== "number") attraction.pricePerGameCents = getAttractionCatalogEntryForCategory(attraction.category).pricePerGameCents;
+      if (typeof attraction.pricePerGameCents !== "number")
+        attraction.pricePerGameCents = getAttractionCatalogEntryForCategory(attraction.category).pricePerGameCents;
     }
   }
 
