@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { TrendChart } from "@/components/ui/TrendChart";
 import { formatPercent } from "@/utils/format";
 import { reputationDailyChange, reputationWeeklyChange } from "@/simulation/engine/reputation";
 import type { ReputationDayRecord, Review } from "@/types";
@@ -12,6 +14,12 @@ function signed(value: number): string {
 
 export function ReputationScreen() {
   const state = useGameStore((s) => s.state);
+  // Memoized on .length, not the array reference — see ReportsScreen/FinancialsScreen.
+  const scoreSeries = useMemo(
+    () => state?.reputation.history.map((r) => ({ day: r.gameDay, value: r.score })) ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
+    [state?.reputation.history.length],
+  );
   if (!state) return null;
 
   const latest = state.reputation.history[state.reputation.history.length - 1] ?? null;
@@ -64,7 +72,10 @@ export function ReputationScreen() {
       </Card>
 
       <Card title="Score History">
-        <DataTable columns={historyColumns} rows={recentHistory} rowKey={(r) => String(r.gameDay)} emptyLabel="No days closed yet." />
+        <TrendChart series={[{ name: "Reputation", color: "#3b82f6", points: scoreSeries }]} formatValue={(v) => Math.round(v).toString()} />
+        <div style={{ marginTop: 16 }}>
+          <DataTable columns={historyColumns} rows={recentHistory} rowKey={(r) => String(r.gameDay)} emptyLabel="No days closed yet." />
+        </div>
       </Card>
 
       <Card title="Reviews">

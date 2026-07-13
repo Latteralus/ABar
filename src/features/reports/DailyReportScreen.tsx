@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { RankedBarChart } from "@/components/ui/RankedBarChart";
 import { formatCents } from "@/utils/money";
 import type { DailyReport, ProductSalesLine } from "@/types";
 
@@ -38,7 +39,14 @@ export function DailyReportView({ report }: { report: DailyReport }) {
       <p className="card-title" style={{ marginTop: 16 }}>
         Sales by Product
       </p>
-      <DataTable columns={salesColumns} rows={report.salesByProduct} rowKey={(l) => l.productId} emptyLabel="No sales." />
+      <RankedBarChart
+        items={report.salesByProduct.map((l) => ({ label: l.productName, value: l.revenue }))}
+        formatValue={(v) => formatCents(v)}
+        emptyLabel="No sales."
+      />
+      <div style={{ marginTop: 12 }}>
+        <DataTable columns={salesColumns} rows={report.salesByProduct} rowKey={(l) => l.productId} emptyLabel="No sales." />
+      </div>
 
       {lossEntries.length > 0 && (
         <>

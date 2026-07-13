@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
+import { TrendChart } from "@/components/ui/TrendChart";
 import { formatCents } from "@/utils/money";
 import { formatPercent } from "@/utils/format";
 import { outstandingBillTotal } from "@/simulation/engine/finance";
@@ -8,6 +10,18 @@ import { summarizeDay, summarizeRange } from "@/simulation/engine/ledgerSummary"
 
 export function OverviewScreen() {
   const state = useGameStore((s) => s.state);
+  // Memoized on .length (see ReportsScreen/FinancialsScreen for why the array reference itself
+  // isn't a useful dependency) — this card only needs to recompute when a new day actually closes.
+  const revenueSeries = useMemo(
+    () => state?.dailyReports.slice(-14).map((r) => ({ day: r.gameDay, value: r.revenue })) ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
+    [state?.dailyReports.length],
+  );
+  const profitSeries = useMemo(
+    () => state?.dailyReports.slice(-14).map((r) => ({ day: r.gameDay, value: r.netProfit })) ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
+    [state?.dailyReports.length],
+  );
   if (!state) return null;
 
   const today = summarizeDay(state.ledger, state.gameDay);
@@ -57,6 +71,19 @@ export function OverviewScreen() {
           />
         </div>
       </Card>
+
+      {state.dailyReports.length > 0 && (
+        <Card title="Last 14 Days">
+          <TrendChart
+            series={[
+              { name: "Revenue", color: "#3b82f6", points: revenueSeries },
+              { name: "Net Profit", color: "#0891b2", points: profitSeries },
+            ]}
+            formatValue={(v) => formatCents(v)}
+            height={150}
+          />
+        </Card>
+      )}
 
       <Card title="Recent Reviews">
         <div className="log-panel">

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
 import { commandService } from "@/services/commandService";
 import { EventBus } from "@/simulation/events/EventBus";
-import { summarizeCashFlow, cashAsOfDay } from "@/simulation/engine/cashFlow";
+import { summarizeCashFlow, cashAsOfDay, cashHistoryByDay } from "@/simulation/engine/cashFlow";
 
 describe("cash flow", () => {
   it("classifies an equipment purchase as investing and a loan payment as financing", () => {
@@ -40,5 +40,23 @@ describe("cash flow", () => {
     expect(cashFlow.operatingCashFlow).toBe(1_500);
     expect(cashFlow.beginningCash + cashFlow.netCashFlow).toBe(cashFlow.endingCash);
     expect(cashAsOfDay(state, state.gameDay)).toBe(state.cash);
+  });
+
+  it("cashHistoryByDay agrees with cashAsOfDay for every day in range, in one ledger pass", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    const bus = new EventBus();
+    state.cash = 100_000_00;
+
+    for (let day = 2; day <= 5; day++) {
+      state.gameDay = day;
+      commandService.purchaseEquipment(state, bus, "equip-cook-station");
+    }
+    state.gameDay = 5;
+
+    const history = cashHistoryByDay(state, 1, 5);
+    expect(history.map((h) => h.day)).toEqual([1, 2, 3, 4, 5]);
+    for (const { day, value } of history) {
+      expect(value).toBe(cashAsOfDay(state, day));
+    }
   });
 });

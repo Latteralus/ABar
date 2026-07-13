@@ -36,6 +36,30 @@ export function cashAsOfDay(state: GameState, day: number): Cents {
   return state.ledger.filter((e) => e.category === "asset_cash" && e.gameDay <= day).reduce((sum, e) => sum + signedAmount(e), 0);
 }
 
+/**
+ * Cash balance at the end of every day in `[fromGameDay, toGameDay]`, in one pass over the ledger.
+ * Prefer this over calling `cashAsOfDay` once per day in a loop — that's O(days * ledger length),
+ * which gets expensive once a save has run for a while (a chart re-rendering every simulation tick
+ * was the first place this actually mattered — see FinancialsScreen's cash trend).
+ */
+export function cashHistoryByDay(state: GameState, fromGameDay: number, toGameDay: number): { day: number; value: Cents }[] {
+  const deltaByDay = new Map<number, Cents>();
+  for (const entry of state.ledger) {
+    if (entry.category !== "asset_cash" || entry.gameDay > toGameDay) continue;
+    deltaByDay.set(entry.gameDay, (deltaByDay.get(entry.gameDay) ?? 0) + signedAmount(entry));
+  }
+
+  const startingBalance = [...deltaByDay.entries()].reduce((sum, [day, delta]) => (day < fromGameDay ? sum + delta : sum), 0);
+
+  let running = startingBalance;
+  const history: { day: number; value: Cents }[] = [];
+  for (let day = fromGameDay; day <= toGameDay; day++) {
+    running += deltaByDay.get(day) ?? 0;
+    history.push({ day, value: running });
+  }
+  return history;
+}
+
 export function summarizeCashFlow(state: GameState, fromGameDay: number, toGameDay: number): CashFlowSummary {
   const entriesInRange = state.ledger.filter((e) => e.category === "asset_cash" && e.gameDay >= fromGameDay && e.gameDay <= toGameDay);
 

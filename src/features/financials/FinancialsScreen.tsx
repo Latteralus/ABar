@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { TrendChart } from "@/components/ui/TrendChart";
 import { formatCents } from "@/utils/money";
 import { formatGameClock } from "@/utils/time";
 import { outstandingBillTotal } from "@/simulation/engine/finance";
 import { summarizeDay } from "@/simulation/engine/ledgerSummary";
 import { summarizeBalanceSheet } from "@/simulation/engine/balanceSheet";
-import { summarizeCashFlow } from "@/simulation/engine/cashFlow";
+import { cashHistoryByDay, summarizeCashFlow } from "@/simulation/engine/cashFlow";
 import { ReceiptView } from "./ReceiptView";
 import type { Bill, LedgerEntry, Receipt } from "@/types";
 
@@ -19,6 +20,16 @@ export function FinancialsScreen() {
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
   const [loanPaymentInput, setLoanPaymentInput] = useState<string>("");
   const [cashFlowRange, setCashFlowRange] = useState<"today" | "week">("today");
+  // A single pass over the ledger (see cashHistoryByDay), memoized on primitives rather than the
+  // `state`/`state.ledger` references — this screen re-renders on every simulation tick (the store
+  // hands back a new top-level `state` object each commit) even when nothing ledger-relevant
+  // changed, and `state.ledger` itself keeps the same array reference across pushes (see
+  // PROJECT_STATUS.md's "select whole state" note), so neither is a safe or useful memo key.
+  const cashHistory = useMemo(
+    () => (state ? cashHistoryByDay(state, Math.max(1, state.gameDay - 29), state.gameDay) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
+    [state?.gameDay, state?.ledger.length],
+  );
   if (!state) return null;
 
   const today = summarizeDay(state.ledger, state.gameDay);
@@ -205,6 +216,9 @@ export function FinancialsScreen() {
             tone={cashFlow.netCashFlow >= 0 ? "positive" : "negative"}
           />
           <StatTile label="Ending Cash" value={formatCents(cashFlow.endingCash)} />
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <TrendChart series={[{ name: "Cash", color: "#3b82f6", points: cashHistory }]} formatValue={(v) => formatCents(v)} />
         </div>
       </Card>
 
