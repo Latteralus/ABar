@@ -51,12 +51,13 @@ export function startAttractionSession(
   groupId: EntityId | null,
 ): void {
   const catalogEntry = getAttractionCatalogEntryForCategory(attraction.category);
+  const totalFeeCents = attraction.pricePerGameCents * customerIds.length;
   attraction.activeSession = {
     id: createId("attrsession"),
     participantIds: customerIds,
     startedAtGameMinute: state.gameMinute,
     remainingGameMinutes: catalogEntry.gameDurationMinutes,
-    feeCents: attraction.pricePerGameCents,
+    feeCents: totalFeeCents,
   };
   attraction.currentStatus = attraction.currentStatus === "degraded" ? "degraded" : "operational";
 
@@ -67,7 +68,7 @@ export function startAttractionSession(
 
   const label = attractionLabel(prop, customerIds, groupId);
   logActivity(state, bus, "attraction", `${label} began a game of ${attraction.name.toLowerCase()}.`, "info", attraction.id);
-  collectAttractionFee(state, prop, bus, attraction, attraction.pricePerGameCents);
+  collectAttractionFee(state, prop, bus, attraction, totalFeeCents);
 }
 
 function endSession(state: GameState, prop: OwnedPropertyState, bus: EventBus, attraction: Attraction, interrupted: boolean): void {

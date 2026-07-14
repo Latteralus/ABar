@@ -4,7 +4,7 @@ import type { Attraction, GameState, OwnedPropertyState } from "@/types";
 import { logActivity } from "./activityLogger";
 import { receiveCash } from "./ledger";
 
-/** Charges a flat per-game fee (not per participant — matches "Pool Table 1 collected a $2.00 game fee" regardless of player count). */
+/** Charges the session's total fee (per-participant — see attractionSessions.startAttractionSession, which multiplies `pricePerGameCents` by headcount before calling this). */
 export function collectAttractionFee(state: GameState, prop: OwnedPropertyState, bus: EventBus, attraction: Attraction, feeCents: number): void {
   receiveCash(state, feeCents, {
     category: "revenue_attraction",

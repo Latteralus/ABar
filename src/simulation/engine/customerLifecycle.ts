@@ -1,5 +1,5 @@
 import { getProperty } from "@/data/properties";
-import { CUSTOMER_BEHAVIOR_CONFIG } from "@/config/customerConfig";
+import { CLOSING_CONFIG, CUSTOMER_BEHAVIOR_CONFIG } from "@/config/customerConfig";
 import { TV_CONFIG } from "@/config/tvConfig";
 import { JUKEBOX_CONFIG } from "@/config/jukeboxConfig";
 import { SOCIAL_FLAVOR_GENERIC, SOCIAL_FLAVOR_WITH_STAFF } from "@/data/customers/socialFlavor";
@@ -24,6 +24,14 @@ function setStatus(customer: Customer, status: Customer["status"], atMinute: num
 
 function waitToleranceMinutes(customer: Customer): number {
   return CUSTOMER_BEHAVIOR_CONFIG.baseWaitToleranceMinutes + customer.patience * CUSTOMER_BEHAVIOR_CONFIG.waitToleranceSkillScale;
+}
+
+function isPastFinalCall(state: GameState): boolean {
+  return state.gameMinute >= CLOSING_CONFIG.finalCallGameMinute;
+}
+
+function isPastWindDown(state: GameState): boolean {
+  return state.gameMinute >= CLOSING_CONFIG.windDownGameMinute;
 }
 
 /** Cosmetic-only "chatted with..." log line — no mechanical effect beyond the caller's own satisfaction nudge. */
@@ -74,6 +82,10 @@ export function departCustomer(
 
 /** Advances every active customer one game-minute: seating, patience timeouts, and consumption pacing. */
 export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
+  if (state.gameMinute === CLOSING_CONFIG.finalCallGameMinute) {
+    logActivity(state, bus, "system", "Last call! No new customers and no new rounds for the rest of the night.");
+  }
+
   const property = getProperty(prop.propertyId);
   const seatedCount = prop.customers.filter((c) => c.seatId !== null && c.status !== "left" && c.status !== "removed").length;
   let availableSeats = effectiveSeatingCapacity(prop, property).seatingCapacity - seatedCount;
@@ -124,7 +136,7 @@ export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng
         if (tvOn) customer.satisfaction = clampRound(customer.satisfaction + TV_CONFIG.satisfactionBonusPerMinute);
         if (jukeboxOn) customer.satisfaction = clampRound(customer.satisfaction + JUKEBOX_CONFIG.satisfactionBonusPerMinute);
         const target = customer.phaseTargetMinutes ?? CUSTOMER_BEHAVIOR_CONFIG.consumingDurationMinutesRange[0];
-        if (waitedMinutes >= target) {
+        if (waitedMinutes >= target || isPastWindDown(state)) {
           const [min, max] = CUSTOMER_BEHAVIOR_CONFIG.socializingDurationMinutesRange;
           customer.phaseTargetMinutes =
             rng.int(min, max) + (tvOn ? TV_CONFIG.dwellTimeBonusMinutes : 0) + (jukeboxOn ? JUKEBOX_CONFIG.dwellTimeBonusMinutes : 0);
@@ -145,7 +157,7 @@ export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng
         );
 
         const socializingTarget = customer.phaseTargetMinutes ?? CUSTOMER_BEHAVIOR_CONFIG.socializingDurationMinutesRange[0];
-        if (waitedMinutes < socializingTarget) break;
+        if (waitedMinutes < socializingTarget && !isPastWindDown(state)) break;
 
         // One decision, made once the socializing window is up — not re-rolled every minute.
         const visitMinutes = state.gameMinute - customer.arrivalGameMinute;
@@ -158,7 +170,11 @@ export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng
         const reorderChance = (customer.reorderTendency / 100) * CUSTOMER_BEHAVIOR_CONFIG.reorderChanceOnDecision * diminishingFactor;
         const withinVisitCap = visitMinutes < CUSTOMER_BEHAVIOR_CONFIG.maxVisitMinutesBeforeCheck;
         const wantsMore =
-          canAfford && withinVisitCap && roundsSoFar < CUSTOMER_BEHAVIOR_CONFIG.maxRoundsPerVisit && rng.chance(reorderChance);
+          !isPastFinalCall(state) &&
+          canAfford &&
+          withinVisitCap &&
+          roundsSoFar < CUSTOMER_BEHAVIOR_CONFIG.maxRoundsPerVisit &&
+          rng.chance(reorderChance);
 
         customer.phaseTargetMinutes = undefined;
         if (wantsMore) {
@@ -188,7 +204,7 @@ export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng
         break;
       }
       case "waiting_for_attraction": {
-        if (waitedMinutes > attractionWaitToleranceMinutes(customer.patience)) {
+        if (isPastWindDown(state) || waitedMinutes > attractionWaitToleranceMinutes(customer.patience)) {
           abandonAttractionQueue(state, prop, bus, customer);
         }
         break;
@@ -211,7 +227,7 @@ export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng
   }
 
   // Force everyone still inside toward the door as closing approaches.
-  if (state.gameMinute >= 705) {
+  if (state.gameMinute >= CLOSING_CONFIG.hardSweepGameMinute) {
     for (const customer of prop.customers) {
       if (customer.status === "left" || customer.status === "removed") continue;
       if (customer.status === "waiting_for_attraction" || customer.status === "using_attraction") {

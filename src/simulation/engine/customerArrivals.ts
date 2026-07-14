@@ -1,4 +1,4 @@
-import { CUSTOMER_ARRIVAL_CONFIG } from "@/config/customerConfig";
+import { CLOSING_CONFIG, CUSTOMER_ARRIVAL_CONFIG } from "@/config/customerConfig";
 import { getProperty } from "@/data/properties";
 import { createId } from "@/services/idService";
 import { minuteOfDayToClockTime } from "@/simulation/clock/gameTime";
@@ -17,6 +17,8 @@ function countActiveCustomers(prop: OwnedPropertyState): number {
 
 /** Decides whether new customers walk in this minute, respecting property capacity (Master Plan Section 10). */
 export function processArrivals(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
+  if (state.gameMinute >= CLOSING_CONFIG.finalCallGameMinute) return; // no new walk-ins past final call
+
   const property = getProperty(prop.propertyId);
   const activeCount = countActiveCustomers(prop);
   if (activeCount >= property.customerCapacity) return;

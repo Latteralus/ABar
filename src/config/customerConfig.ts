@@ -86,6 +86,19 @@ export const CUSTOMER_BEHAVIOR_CONFIG = {
   intoxicationRemovalThreshold: 85,
 };
 
+/**
+ * Staged closing sequence (Wishlist investigation item: "a proper closing order for customers").
+ * The bar opens 2:00 p.m. and closes 2:00 a.m. (game-minute 720 — see gameTime.ts).
+ */
+export const CLOSING_CONFIG = {
+  /** "Final call," 1:00 a.m. — one hour before close. No new walk-ins, no new attraction queue joins, and no customer starts another round after this point. */
+  finalCallGameMinute: 660,
+  /** "Wind-down," 1:30 a.m. — anyone still lingering (drinking, socializing, queued for an attraction) is nudged straight toward paying out instead of continuing their normal visit pacing. */
+  windDownGameMinute: 690,
+  /** Hard safety-net sweep, 1:45 a.m. — anyone still inside is forced toward the door regardless of state, guaranteeing every tab is settled before the 2:00 a.m. close. */
+  hardSweepGameMinute: 705,
+};
+
 export const REMOVAL_CONFIG = {
   /** Minutes staff wait after asking an intoxicated customer to leave before resolving whether they cooperated. */
   warnedResolutionMinutes: 2,

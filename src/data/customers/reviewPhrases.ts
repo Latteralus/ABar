@@ -17,10 +17,17 @@ export const REVIEW_SERVICE: Record<ReviewTone, readonly string[]> = {
   negative: ["Waited way too long to get served.", "Staff seemed overwhelmed.", "Service was slow all night."],
 };
 
-export const REVIEW_PRODUCT: Record<ReviewTone, readonly string[]> = {
-  positive: ["The drinks were excellent.", "Really well-made cocktails.", "Food came out great too."],
-  neutral: ["Drinks were fine.", "Nothing wrong with the food, nothing special either."],
-  negative: ["Drinks were mediocre at best.", "Wasn't impressed with the food.", "Quality just wasn't there."],
+export const REVIEW_DRINK: Record<ReviewTone, readonly string[]> = {
+  positive: ["The drinks were excellent.", "Really well-made cocktails."],
+  neutral: ["Drinks were fine.", "Nothing special, but nothing wrong either."],
+  negative: ["Drinks were mediocre at best.", "Quality just wasn't there."],
+};
+
+/** Only appended when the customer's own tab actually had a food line item (see reviews.ts's assembleReviewText) — otherwise a review would mention food at a bar not serving any. */
+export const REVIEW_FOOD: Record<ReviewTone, readonly string[]> = {
+  positive: ["Food came out great too."],
+  neutral: ["Nothing wrong with the food, nothing special either."],
+  negative: ["Wasn't impressed with the food."],
 };
 
 export const REVIEW_PRICE: Record<ReviewTone, readonly string[]> = {

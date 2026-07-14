@@ -1,4 +1,5 @@
 import { ATTRACTION_CONFIG } from "@/config/attractionConfig";
+import { CLOSING_CONFIG } from "@/config/customerConfig";
 import { getAttractionCatalogEntryForCategory, type AttractionCatalogEntry } from "@/data/attractions/attractionCatalog";
 import { estimateAttractionWaitMinutes, joinAttractionQueue } from "./attractionQueue";
 import { attractionWaitToleranceMinutes } from "./attractionSessions";
@@ -67,6 +68,7 @@ function considerAttractions(
 /** Steps 1-4 of the attraction lifecycle: notice, decide as a unit (arrival group or solo), check wait tolerance, join or continue the normal visit. */
 export function processAttractionDecisions(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
   if (prop.attractions.length === 0) return;
+  if (state.gameMinute >= CLOSING_CONFIG.finalCallGameMinute) return; // nobody starts a new game this late
 
   const decidedGroupIds = new Set<EntityId>();
   for (const customer of prop.customers) {

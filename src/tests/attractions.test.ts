@@ -222,7 +222,7 @@ describe("attraction sessions", () => {
     expect(prop.customers.every((c) => c.status === "deciding_next_order")).toBe(true);
   });
 
-  it("collects the same flat game fee whether one customer plays alone or a full group plays together", () => {
+  it("charges the fee once per participant, not a single flat fee per game", () => {
     const catalogEntry = ATTRACTION_CATALOG.find((e) => e.id === POOL_TABLE_ID)!;
 
     const solo = setup();
@@ -238,10 +238,10 @@ describe("attraction sessions", () => {
     const groupCashBefore = group.state.cash;
     joinAttractionQueue(group.state, group.prop, group.bus, poolTable(group.prop), ["cust-a", "cust-b"], "group-1");
     ensureAttractionQueueProgress(group.state, group.prop, group.bus);
-    expect(group.state.cash).toBe(groupCashBefore + catalogEntry.pricePerGameCents);
+    expect(group.state.cash).toBe(groupCashBefore + catalogEntry.pricePerGameCents * 2);
 
     const feeEntry = group.state.ledger.find((e) => e.category === "revenue_attraction");
-    expect(feeEntry?.amount).toBe(catalogEntry.pricePerGameCents);
+    expect(feeEntry?.amount).toBe(catalogEntry.pricePerGameCents * 2);
   });
 
   it("lets the player adjust attraction prices before a game starts", () => {
@@ -355,7 +355,7 @@ describe.each([
     expect(state.cash).toBe(cashBefore - catalogEntry.purchasePrice);
   });
 
-  it("fills a session once enough participants join and collects the flat per-game fee", () => {
+  it("fills a session once enough participants join and collects the per-participant fee", () => {
     const catalogEntry = ATTRACTION_CATALOG.find((e) => e.id === catalogId)!;
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
     const prop = activeProperty(state);
@@ -363,11 +363,13 @@ describe.each([
     commandService.purchaseAttraction(state, bus, catalogId);
     const attraction = prop.attractions[0];
     const cashBefore = state.cash;
+    let participantCount = 1;
 
     if (minParticipants === 1) {
       prop.customers.push(makeCustomer({ id: "cust-a" }));
       joinAttractionQueue(state, prop, bus, attraction, ["cust-a"], null);
     } else {
+      participantCount = 2;
       prop.customerGroups.push({ id: "group-1", memberIds: ["cust-a", "cust-b"], arrivalGameMinute: 0 });
       prop.customers.push(makeCustomer({ id: "cust-a", groupId: "group-1" }), makeCustomer({ id: "cust-b", groupId: "group-1" }));
       joinAttractionQueue(state, prop, bus, attraction, ["cust-a", "cust-b"], "group-1");
@@ -376,7 +378,7 @@ describe.each([
     ensureAttractionQueueProgress(state, prop, bus);
 
     expect(attraction.activeSession).not.toBeNull();
-    expect(state.cash).toBe(cashBefore + catalogEntry.pricePerGameCents);
+    expect(state.cash).toBe(cashBefore + catalogEntry.pricePerGameCents * participantCount);
   });
 });
 
