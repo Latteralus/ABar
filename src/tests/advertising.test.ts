@@ -3,6 +3,7 @@ import { createNewGameState } from "@/services/newGameService";
 import { commandService } from "@/services/commandService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { activePromotionDemandMultiplier, effectivePrice, expireEndedPromotions } from "@/simulation/engine/advertising";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 
 describe("advertising", () => {
   it("purchasePromotion validates cash, charges opex_advertising + asset_cash, and rejects a duplicate", () => {
@@ -32,35 +33,38 @@ describe("advertising", () => {
 
   it("demand multiplier is 0 bonus before delayDays and rises toward the peak partway through the ramp", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     state.gameDay = 10;
     commandService.purchasePromotion(state, new EventBus(), "promo-radio"); // delayDays 2, durationDays 7, peak 1.25
 
     state.gameDay = 11; // 1 day elapsed, still within the 2-day delay
-    expect(activePromotionDemandMultiplier(state)).toBe(1);
+    expect(activePromotionDemandMultiplier(state, prop)).toBe(1);
 
     state.gameDay = 14; // 4 days elapsed — the ramp's midpoint, at the peak
-    expect(activePromotionDemandMultiplier(state)).toBeCloseTo(1.25, 5);
+    expect(activePromotionDemandMultiplier(state, prop)).toBeCloseTo(1.25, 5);
   });
 
   it("effectivePrice discounts only while a matching happy-hour/drink-special is active, and never touches food during happy hour", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    expect(effectivePrice(state, "prod-rum-cola", 800)).toBe(800);
+    const prop = activeProperty(state);
+    expect(effectivePrice(state, prop, "prod-rum-cola", 800)).toBe(800);
 
     commandService.purchasePromotion(state, new EventBus(), "promo-happy-hour"); // 20% off, all drinks, day 1 only
-    expect(effectivePrice(state, "prod-rum-cola", 800)).toBe(640);
-    expect(effectivePrice(state, "prod-burger", 1200)).toBe(1200); // food unaffected
+    expect(effectivePrice(state, prop, "prod-rum-cola", 800)).toBe(640);
+    expect(effectivePrice(state, prop, "prod-burger", 1200)).toBe(1200); // food unaffected
 
     state.gameDay = 2; // promo's single active day has passed
-    expect(effectivePrice(state, "prod-rum-cola", 800)).toBe(800);
+    expect(effectivePrice(state, prop, "prod-rum-cola", 800)).toBe(800);
   });
 
   it("expireEndedPromotions removes promotions past their end day", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     commandService.purchasePromotion(state, new EventBus(), "promo-happy-hour"); // durationDays 1
-    expect(state.activePromotions).toHaveLength(1);
+    expect(prop.activePromotions).toHaveLength(1);
 
     state.gameDay = 2;
-    expireEndedPromotions(state, new EventBus());
-    expect(state.activePromotions).toHaveLength(0);
+    expireEndedPromotions(state, prop, new EventBus());
+    expect(prop.activePromotions).toHaveLength(0);
   });
 });

@@ -12,12 +12,16 @@ export type LedgerCategory =
   | "revenue_bar_tip_share"
   | "revenue_attraction"
   | "revenue_other"
+  /** Estimated revenue for a background (inactive) property — see simulation/engine/backgroundOperations.ts. Never posted for the active property, which uses the specific categories above instead. */
+  | "revenue_background_estimate"
   // cost of goods sold
   | "cogs_alcohol"
   | "cogs_soft_drink"
   | "cogs_food_ingredients"
   | "cogs_spoilage"
   | "cogs_prep_waste"
+  /** Estimated COGS for a background (inactive) property — see simulation/engine/backgroundOperations.ts. */
+  | "cogs_background_estimate"
   // operating expenses
   | "opex_payroll"
   | "opex_utilities"
@@ -52,6 +56,8 @@ export interface LedgerEntry {
   amount: Cents;
   description: string;
   relatedEntityId?: EntityId;
+  /** Which owned property this entry belongs to, for slicing consolidated financials per-location. Optional so every pre-multi-property caller stays valid; omitted for company-wide entries (e.g. the startup loan). */
+  propertyId?: EntityId;
 }
 
 export interface Loan {

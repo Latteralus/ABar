@@ -7,32 +7,34 @@ import { formatCents } from "@/utils/money";
 import { formatPercent } from "@/utils/format";
 import { outstandingBillTotal } from "@/simulation/engine/finance";
 import { summarizeDay, summarizeRange } from "@/simulation/engine/ledgerSummary";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 
 export function OverviewScreen() {
   const state = useGameStore((s) => s.state);
   // Memoized on .length (see ReportsScreen/FinancialsScreen for why the array reference itself
   // isn't a useful dependency) — this card only needs to recompute when a new day actually closes.
   const revenueSeries = useMemo(
-    () => state?.dailyReports.slice(-14).map((r) => ({ day: r.gameDay, value: r.revenue })) ?? [],
+    () => (state ? activeProperty(state).dailyReports.slice(-14).map((r) => ({ day: r.gameDay, value: r.revenue })) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
-    [state?.dailyReports.length],
+    [state, state?.activePropertyId],
   );
   const profitSeries = useMemo(
-    () => state?.dailyReports.slice(-14).map((r) => ({ day: r.gameDay, value: r.netProfit })) ?? [],
+    () => (state ? activeProperty(state).dailyReports.slice(-14).map((r) => ({ day: r.gameDay, value: r.netProfit })) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
-    [state?.dailyReports.length],
+    [state, state?.activePropertyId],
   );
   if (!state) return null;
+  const prop = activeProperty(state);
 
   const today = summarizeDay(state.ledger, state.gameDay);
   const weekStart = Math.max(1, state.gameDay - 6);
   const week = summarizeRange(state.ledger, weekStart, state.gameDay);
 
-  const activeCustomers = state.customers.filter((c) => c.status !== "left" && c.status !== "removed");
-  const lowStockItems = state.inventory.filter((i) => i.quantityOnHand < i.reorderMinimum);
+  const activeCustomers = prop.customers.filter((c) => c.status !== "left" && c.status !== "removed");
+  const lowStockItems = prop.inventory.filter((i) => i.quantityOnHand < i.reorderMinimum);
   const recentEvents = state.activityLog.slice(-8).reverse();
-  const recentReviews = [...state.reviews].slice(-5).reverse();
-  const openBillTotal = outstandingBillTotal(state);
+  const recentReviews = [...prop.reviews].slice(-5).reverse();
+  const openBillTotal = outstandingBillTotal([...state.bills, ...prop.bills]);
   const insolvencyDaysRemaining = state.insolvency ? Math.max(0, state.insolvency.bankruptcyGameDay - state.gameDay) : null;
 
   return (
@@ -56,13 +58,13 @@ export function OverviewScreen() {
       <Card title="Operations Snapshot">
         <div className="card-grid">
           <StatTile label="Occupancy" value={`${activeCustomers.length}`} />
-          <StatTile label="Employees" value={`${state.employees.length}`} />
-          <StatTile label="Open Tabs" value={`${state.tabs.filter((t) => t.status === "open").length}`} />
+          <StatTile label="Employees" value={`${prop.employees.length}`} />
+          <StatTile label="Open Tabs" value={`${prop.tabs.filter((t) => t.status === "open").length}`} />
           <StatTile label="Inventory Warnings" value={`${lowStockItems.length}`} tone={lowStockItems.length > 0 ? "negative" : "neutral"} />
           <StatTile
             label="Service Reputation"
-            value={formatPercent(state.reputation.score)}
-            tone={state.reputation.score < 40 ? "negative" : state.reputation.score >= 65 ? "positive" : undefined}
+            value={formatPercent(prop.reputation.score)}
+            tone={prop.reputation.score < 40 ? "negative" : prop.reputation.score >= 65 ? "positive" : undefined}
           />
           <StatTile
             label="Insolvency"
@@ -72,7 +74,7 @@ export function OverviewScreen() {
         </div>
       </Card>
 
-      {state.dailyReports.length > 0 && (
+      {prop.dailyReports.length > 0 && (
         <Card title="Last 14 Days">
           <TrendChart
             series={[

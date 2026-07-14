@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { getProperty } from "@/data/properties";
 import { applySpoilage } from "@/simulation/engine/spoilage";
 import { forceSundayBillingNow, updateInsolvency } from "@/simulation/engine/finance";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 
 /** Dev-only tools (Master Plan Section 51). Vite strips this whole module's usage in production builds via the import.meta.env.DEV guard in SettingsScreen. */
 export function DebugPanel() {
@@ -38,7 +39,8 @@ export function DebugPanel() {
           className="btn"
           onClick={() => {
             const s = engine.getState();
-            applySpoilage(s, engine.eventBus, getProperty(s.propertyId));
+            const prop = activeProperty(s);
+            applySpoilage(s, prop, engine.eventBus, getProperty(prop.propertyId));
             engine.commitNow();
           }}
         >
@@ -48,7 +50,7 @@ export function DebugPanel() {
           className="btn"
           onClick={() => {
             const s = engine.getState();
-            for (const equipment of s.equipment) {
+            for (const equipment of activeProperty(s).equipment) {
               equipment.condition = 0;
               equipment.currentStatus = "failed";
             }
@@ -61,7 +63,7 @@ export function DebugPanel() {
           className="btn"
           onClick={() => {
             const s = engine.getState();
-            for (const attraction of s.attractions) {
+            for (const attraction of activeProperty(s).attractions) {
               attraction.condition = 0;
               attraction.currentStatus = "failed";
             }
@@ -74,7 +76,7 @@ export function DebugPanel() {
           className="btn"
           onClick={() => {
             const s = engine.getState();
-            forceSundayBillingNow(s, engine.eventBus);
+            forceSundayBillingNow(s, activeProperty(s), engine.eventBus);
             engine.commitNow();
           }}
         >

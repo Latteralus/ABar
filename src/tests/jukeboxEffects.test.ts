@@ -6,6 +6,7 @@ import { hasOperationalJukebox, processJukeboxSongs, shouldPlayASong } from "@/s
 import { JUKEBOX_CONFIG } from "@/config/jukeboxConfig";
 import { advanceCustomers } from "@/simulation/engine/customerLifecycle";
 import { describeEquipmentBenefit } from "@/data/equipment/equipmentCatalog";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
 import type { Customer } from "@/types";
 
@@ -42,20 +43,21 @@ function customer(overrides: Partial<Customer> = {}): Customer {
 describe("jukeboxEffects", () => {
   it("hasOperationalJukebox is true only for an operational/degraded owned jukebox", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    expect(hasOperationalJukebox(state)).toBe(false);
+    const prop = activeProperty(state);
+    expect(hasOperationalJukebox(prop)).toBe(false);
 
     commandService.purchaseEquipment(state, new EventBus(), "equip-jukebox-classic");
-    expect(hasOperationalJukebox(state)).toBe(true);
+    expect(hasOperationalJukebox(prop)).toBe(true);
 
-    const jukebox = state.equipment.find((e) => e.category === "jukebox")!;
+    const jukebox = prop.equipment.find((e) => e.category === "jukebox")!;
     jukebox.currentStatus = "degraded";
-    expect(hasOperationalJukebox(state)).toBe(true);
+    expect(hasOperationalJukebox(prop)).toBe(true);
 
     jukebox.currentStatus = "failed";
-    expect(hasOperationalJukebox(state)).toBe(false);
+    expect(hasOperationalJukebox(prop)).toBe(false);
 
     jukebox.currentStatus = "awaiting_repair";
-    expect(hasOperationalJukebox(state)).toBe(false);
+    expect(hasOperationalJukebox(prop)).toBe(false);
   });
 
   it("shouldPlayASong respects the seeded RNG chance roll", () => {
@@ -67,38 +69,40 @@ describe("jukeboxEffects", () => {
 
   it("charges the flat song fee to revenue_attraction and bumps satisfaction when the roll succeeds", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
     commandService.purchaseEquipment(state, bus, "equip-jukebox-classic");
-    state.customers.push(customer({ satisfaction: 70 }));
+    prop.customers.push(customer({ satisfaction: 70 }));
     const cashBefore = state.cash;
     const alwaysPlays = { chance: () => true } as unknown as SeededRandom;
 
-    processJukeboxSongs(state, alwaysPlays, bus);
+    processJukeboxSongs(state, prop, alwaysPlays, bus);
 
     expect(state.cash).toBe(cashBefore + JUKEBOX_CONFIG.songFeeCents);
     const feeEntry = state.ledger.find((e) => e.category === "revenue_attraction");
     expect(feeEntry?.amount).toBe(JUKEBOX_CONFIG.songFeeCents);
     const cashEntry = state.ledger.find((e) => e.category === "asset_cash" && e.amount === JUKEBOX_CONFIG.songFeeCents);
     expect(cashEntry).toBeTruthy();
-    expect(state.customers[0].satisfaction).toBe(70 + JUKEBOX_CONFIG.satisfactionGainOnPlayingASong);
+    expect(prop.customers[0].satisfaction).toBe(70 + JUKEBOX_CONFIG.satisfactionGainOnPlayingASong);
   });
 
   it("does nothing when no jukebox is owned, or none are operational", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
-    state.customers.push(customer());
+    prop.customers.push(customer());
     const cashBefore = state.cash;
     const alwaysPlays = { chance: () => true } as unknown as SeededRandom;
 
-    processJukeboxSongs(state, alwaysPlays, bus);
+    processJukeboxSongs(state, prop, alwaysPlays, bus);
     expect(state.cash).toBe(cashBefore);
 
     commandService.purchaseEquipment(state, bus, "equip-jukebox-classic");
-    const jukebox = state.equipment.find((e) => e.category === "jukebox")!;
+    const jukebox = prop.equipment.find((e) => e.category === "jukebox")!;
     jukebox.currentStatus = "failed";
     const cashAfterPurchase = state.cash;
 
-    processJukeboxSongs(state, alwaysPlays, bus);
+    processJukeboxSongs(state, prop, alwaysPlays, bus);
     expect(state.cash).toBe(cashAfterPurchase);
   });
 
@@ -106,17 +110,19 @@ describe("jukeboxEffects", () => {
     const rng = { int: () => 10, chance: () => false } as unknown as SeededRandom;
 
     const withoutJukebox = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    withoutJukebox.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
+    const withoutJukeboxProp = activeProperty(withoutJukebox);
+    withoutJukeboxProp.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
     withoutJukebox.gameMinute = 1;
-    advanceCustomers(withoutJukebox, rng, new EventBus());
-    const targetWithout = withoutJukebox.customers[0].phaseTargetMinutes;
+    advanceCustomers(withoutJukebox, withoutJukeboxProp, rng, new EventBus());
+    const targetWithout = withoutJukeboxProp.customers[0].phaseTargetMinutes;
 
     const withJukebox = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const withJukeboxProp = activeProperty(withJukebox);
     commandService.purchaseEquipment(withJukebox, new EventBus(), "equip-jukebox-classic");
-    withJukebox.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
+    withJukeboxProp.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
     withJukebox.gameMinute = 1;
-    advanceCustomers(withJukebox, rng, new EventBus());
-    const targetWith = withJukebox.customers[0].phaseTargetMinutes;
+    advanceCustomers(withJukebox, withJukeboxProp, rng, new EventBus());
+    const targetWith = withJukeboxProp.customers[0].phaseTargetMinutes;
 
     expect(targetWith).toBeGreaterThan(targetWithout!);
   });

@@ -3,27 +3,29 @@ import { useGameStore } from "@/stores/gameStore";
 import { Card } from "@/components/ui/Card";
 import { TrendChart } from "@/components/ui/TrendChart";
 import { formatCents } from "@/utils/money";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import { DailyReportView } from "./DailyReportScreen";
 
 export function ReportsScreen() {
   const state = useGameStore((s) => s.state);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const prop = state ? activeProperty(state) : null;
   // Memoized on .length rather than the array reference: dailyReports.push()'d in place by
   // dayCycle.ts, so the reference is stable across ticks even as this screen re-renders on every
   // tick (see FinancialsScreen's cashHistory for the same reasoning, spelled out in more detail).
   const revenueSeries = useMemo(
-    () => state?.dailyReports.map((r) => ({ day: r.gameDay, value: r.revenue })) ?? [],
+    () => prop?.dailyReports.map((r) => ({ day: r.gameDay, value: r.revenue })) ?? [],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
-    [state?.dailyReports.length],
+    [prop?.dailyReports.length],
   );
   const profitSeries = useMemo(
-    () => state?.dailyReports.map((r) => ({ day: r.gameDay, value: r.netProfit })) ?? [],
+    () => prop?.dailyReports.map((r) => ({ day: r.gameDay, value: r.netProfit })) ?? [],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
-    [state?.dailyReports.length],
+    [prop?.dailyReports.length],
   );
-  if (!state) return null;
+  if (!state || !prop) return null;
 
-  const reports = [...state.dailyReports].reverse();
+  const reports = [...prop.dailyReports].reverse();
   const selected = reports.find((r) => r.gameDay === selectedDay) ?? reports[0] ?? null;
 
   return (

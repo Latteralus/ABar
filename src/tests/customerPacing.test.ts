@@ -4,7 +4,8 @@ import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { advanceCustomers } from "@/simulation/engine/customerLifecycle";
 import { CUSTOMER_BEHAVIOR_CONFIG } from "@/config/customerConfig";
-import type { Customer, GameState } from "@/types";
+import { activeProperty } from "@/simulation/engine/activeProperty";
+import type { Customer, GameState, OwnedPropertyState } from "@/types";
 
 function makeCustomer(overrides: Partial<Customer> = {}): Customer {
   return {
@@ -35,25 +36,26 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
   };
 }
 
-function tick(state: GameState, rng: SeededRandom, bus: EventBus, minutes: number): void {
+function tick(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus, minutes: number): void {
   for (let i = 0; i < minutes; i++) {
     state.gameMinute += 1;
-    advanceCustomers(state, rng, bus);
+    advanceCustomers(state, prop, rng, bus);
   }
 }
 
 describe("consuming phase", () => {
   it("stays consuming until its rolled phaseTargetMinutes elapses, not a fixed 2 minutes", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
     const rng = new SeededRandom(1);
     const customer = makeCustomer({ phaseTargetMinutes: 10 });
-    state.customers.push(customer);
+    prop.customers.push(customer);
 
-    tick(state, rng, bus, 5);
+    tick(state, prop, rng, bus, 5);
     expect(customer.status).toBe("consuming");
 
-    tick(state, rng, bus, 6);
+    tick(state, prop, rng, bus, 6);
     expect(customer.status).toBe("deciding_next_order");
   });
 });
@@ -61,6 +63,7 @@ describe("consuming phase", () => {
 describe("socializing (deciding_next_order) phase", () => {
   it("does not roll the reorder decision before the socializing window elapses", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
     // chance() always true would normally force a reorder instantly if rolled per-minute;
     // this proves the decision is gated behind the phaseTargetMinutes window, not re-rolled every minute.
@@ -71,14 +74,15 @@ describe("socializing (deciding_next_order) phase", () => {
       int: () => 0,
     } as unknown as SeededRandom;
     const customer = makeCustomer({ status: "deciding_next_order", phaseTargetMinutes: 8, statusEnteredAtGameMinute: 0 });
-    state.customers.push(customer);
+    prop.customers.push(customer);
 
-    tick(state, alwaysTrueRng, bus, 7);
+    tick(state, prop, alwaysTrueRng, bus, 7);
     expect(customer.status).toBe("deciding_next_order");
   });
 
   it("gains a little satisfaction each minute spent socializing", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
     const rng = new SeededRandom(1);
     const customer = makeCustomer({
@@ -87,14 +91,15 @@ describe("socializing (deciding_next_order) phase", () => {
       satisfaction: 50,
       statusEnteredAtGameMinute: 0,
     });
-    state.customers.push(customer);
+    prop.customers.push(customer);
 
-    tick(state, rng, bus, 5);
+    tick(state, prop, rng, bus, 5);
     expect(customer.satisfaction).toBeGreaterThan(50);
   });
 
   it("respects the max-visit-minutes cap and refuses to reorder past it", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
     const alwaysTrueRng = {
       chance: () => true,
@@ -108,11 +113,11 @@ describe("socializing (deciding_next_order) phase", () => {
       statusEnteredAtGameMinute: 0,
       arrivalGameMinute: 0,
     });
-    state.customers.push(customer);
+    prop.customers.push(customer);
     // A real customer reaching this phase already has a delivered item on their tab — without
     // this, customerLifecycle now (correctly) treats an empty tab as "nothing to pay for" and
     // sends them straight out the door instead of to payment (see the item_unavailable fix).
-    state.tabs.push({
+    prop.tabs.push({
       id: "tab-1",
       tabNumber: 1,
       customerId: customer.id,
@@ -132,13 +137,14 @@ describe("socializing (deciding_next_order) phase", () => {
     });
     state.gameMinute = CUSTOMER_BEHAVIOR_CONFIG.maxVisitMinutesBeforeCheck + 5;
 
-    advanceCustomers(state, alwaysTrueRng, bus);
+    advanceCustomers(state, prop, alwaysTrueRng, bus);
 
     expect(customer.status).toBe("waiting_to_pay");
   });
 
   it("does roll toward another round when well within the visit cap and chance favors it", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const bus = new EventBus();
     const alwaysTrueRng = {
       chance: () => true,
@@ -154,10 +160,10 @@ describe("socializing (deciding_next_order) phase", () => {
       totalSpent: 0,
       itemsOrderedCount: 0,
     });
-    state.customers.push(customer);
+    prop.customers.push(customer);
     state.gameMinute = 5;
 
-    advanceCustomers(state, alwaysTrueRng, bus);
+    advanceCustomers(state, prop, alwaysTrueRng, bus);
 
     expect(customer.status).toBe("waiting_to_order");
   });

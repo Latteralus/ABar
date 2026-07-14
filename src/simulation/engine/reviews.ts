@@ -10,7 +10,7 @@ import {
 } from "@/data/customers/reviewPhrases";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { Customer, GameState } from "@/types";
+import type { Customer, GameState, OwnedPropertyState } from "@/types";
 import { logActivity } from "./activityLogger";
 
 function toneForSatisfaction(satisfaction: number): ReviewTone {
@@ -45,7 +45,7 @@ function assembleReviewText(rng: SeededRandom, customer: Customer, cleanliness: 
 }
 
 /** Rolls the customer's reviewTendency (Master Plan Section 29); called from customerLifecycle.departCustomer. */
-export function maybeGenerateReview(state: GameState, bus: EventBus, rng: SeededRandom, customer: Customer): void {
+export function maybeGenerateReview(state: GameState, prop: OwnedPropertyState, bus: EventBus, rng: SeededRandom, customer: Customer): void {
   if (!rng.chance(customer.reviewTendency / 100)) return;
 
   const review = {
@@ -53,9 +53,9 @@ export function maybeGenerateReview(state: GameState, bus: EventBus, rng: Seeded
     customerId: customer.id,
     customerName: `${customer.firstName} ${customer.lastName}`,
     rating: ratingForSatisfaction(customer.satisfaction),
-    text: assembleReviewText(rng, customer, state.barCleanliness),
+    text: assembleReviewText(rng, customer, prop.barCleanliness),
     gameDay: state.gameDay,
   };
-  state.reviews.push(review);
+  prop.reviews.push(review);
   logActivity(state, bus, "customer", `${review.customerName} left a ${review.rating}-star review.`);
 }

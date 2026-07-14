@@ -1,7 +1,7 @@
 import { TV_CONFIG } from "@/config/tvConfig";
 import { isEquipmentUsable } from "./equipmentMaintenance";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { Customer, GameState } from "@/types";
+import type { Customer, OwnedPropertyState } from "@/types";
 
 /**
  * TVs are an ambient amenity, not an exclusive activity like pool (no queue, no per-use fee,
@@ -10,8 +10,8 @@ import type { Customer, GameState } from "@/types";
  * machinery wholesale (see equipmentMaintenance.ts) since a TV is mechanically just equipment;
  * this file only owns the customer-facing effect.
  */
-export function hasOperationalTv(state: GameState): boolean {
-  return state.equipment.some((e) => e.category === "tv" && isEquipmentUsable(e));
+export function hasOperationalTv(prop: OwnedPropertyState): boolean {
+  return prop.equipment.some((e) => e.category === "tv" && isEquipmentUsable(e));
 }
 
 /** Chance per minute a customer already consuming/socializing near a working TV orders another round — mirrors customerAttractionDecisions.shouldOrderWhileAtAttraction, smaller since watching TV is passive. */

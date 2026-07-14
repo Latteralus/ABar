@@ -3,16 +3,16 @@ import { getRecipeForProduct } from "@/data/recipes/recipes";
 import { hasRequiredEquipment } from "./orderProcessing";
 import { logActivity } from "./activityLogger";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { GameState } from "@/types";
+import type { GameState, OwnedPropertyState } from "@/types";
 
-function hasQualifiedEmployee(state: GameState, requiredRole: string): boolean {
-  return state.employees.some((e) => e.role === requiredRole);
+function hasQualifiedEmployee(prop: OwnedPropertyState, requiredRole: string): boolean {
+  return prop.employees.some((e) => e.role === requiredRole);
 }
 
-function hasEnoughSupplyForOne(state: GameState, productId: string): boolean {
+function hasEnoughSupplyForOne(prop: OwnedPropertyState, productId: string): boolean {
   const recipe = getRecipeForProduct(productId);
   return recipe.ingredients.every((ing) => {
-    const item = state.inventory.find((i) => i.id === ing.inventoryItemId);
+    const item = prop.inventory.find((i) => i.id === ing.inventoryItemId);
     return !!item && item.quantityOnHand >= ing.quantity;
   });
 }
@@ -28,13 +28,13 @@ function hasEnoughSupplyForOne(state: GameState, productId: string): boolean {
  * capability can newly become true (a hire, an equipment purchase, a delivery) — not on a
  * per-minute tick.
  */
-export function ensureMenuAutoActivation(state: GameState, bus: EventBus): void {
-  for (const listing of state.menu) {
+export function ensureMenuAutoActivation(state: GameState, prop: OwnedPropertyState, bus: EventBus): void {
+  for (const listing of prop.menu) {
     if (listing.isActive || listing.hasBeenToggled) continue;
-    if (!hasRequiredEquipment(state, listing.productId)) continue;
+    if (!hasRequiredEquipment(prop, listing.productId)) continue;
     const recipe = getRecipeForProduct(listing.productId);
-    if (!hasQualifiedEmployee(state, recipe.requiredRole)) continue;
-    if (!hasEnoughSupplyForOne(state, listing.productId)) continue;
+    if (!hasQualifiedEmployee(prop, recipe.requiredRole)) continue;
+    if (!hasEnoughSupplyForOne(prop, listing.productId)) continue;
 
     listing.isActive = true;
     logActivity(

@@ -3,6 +3,7 @@ import { createNewGameState } from "@/services/newGameService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { maybeGenerateReview } from "@/simulation/engine/reviews";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Customer } from "@/types";
 
 function customer(overrides: Partial<Customer> = {}): Customer {
@@ -37,37 +38,41 @@ function customer(overrides: Partial<Customer> = {}): Customer {
 describe("reviews", () => {
   it("always generates a review when reviewTendency is 100", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const rng = new SeededRandom(1);
-    maybeGenerateReview(state, new EventBus(), rng, customer({ reviewTendency: 100 }));
-    expect(state.reviews).toHaveLength(1);
+    maybeGenerateReview(state, prop, new EventBus(), rng, customer({ reviewTendency: 100 }));
+    expect(prop.reviews).toHaveLength(1);
   });
 
   it("never generates a review when reviewTendency is 0", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const rng = new SeededRandom(1);
     for (let i = 0; i < 20; i++) {
-      maybeGenerateReview(state, new EventBus(), rng, customer({ id: `c${i}`, reviewTendency: 0 }));
+      maybeGenerateReview(state, prop, new EventBus(), rng, customer({ id: `c${i}`, reviewTendency: 0 }));
     }
-    expect(state.reviews).toHaveLength(0);
+    expect(prop.reviews).toHaveLength(0);
   });
 
   it("produces a negative price comment for a customer who left specifically over price", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const rng = new SeededRandom(1);
-    maybeGenerateReview(state, new EventBus(), rng, customer({ reviewTendency: 100, satisfaction: 85, leaveReason: "price_too_high" }));
+    maybeGenerateReview(state, prop, new EventBus(), rng, customer({ reviewTendency: 100, satisfaction: 85, leaveReason: "price_too_high" }));
 
-    const review = state.reviews[0];
+    const review = prop.reviews[0];
     const negativePricePhrases = ["Prices felt steep.", "A bit overpriced for what you get.", "Wallet took a hit."];
     expect(negativePricePhrases.some((phrase) => review.text.includes(phrase))).toBe(true);
   });
 
   it("maps satisfaction to a 1-5 star rating", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const rng = new SeededRandom(1);
-    maybeGenerateReview(state, new EventBus(), rng, customer({ reviewTendency: 100, satisfaction: 95 }));
-    maybeGenerateReview(state, new EventBus(), rng, customer({ id: "c2", reviewTendency: 100, satisfaction: 5 }));
+    maybeGenerateReview(state, prop, new EventBus(), rng, customer({ reviewTendency: 100, satisfaction: 95 }));
+    maybeGenerateReview(state, prop, new EventBus(), rng, customer({ id: "c2", reviewTendency: 100, satisfaction: 5 }));
 
-    expect(state.reviews[0].rating).toBe(5);
-    expect(state.reviews[1].rating).toBe(1);
+    expect(prop.reviews[0].rating).toBe(5);
+    expect(prop.reviews[1].rating).toBe(1);
   });
 });

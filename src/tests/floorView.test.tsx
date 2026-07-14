@@ -4,6 +4,7 @@ import { commandService } from "@/services/commandService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { STARTER_PROPERTY } from "@/data/properties/starterProperty";
 import { deriveFloorLayout } from "@/features/operations/FloorView";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Customer } from "@/types";
 
 function customer(id: string, overrides: Partial<Customer> = {}): Customer {
@@ -38,7 +39,8 @@ function customer(id: string, overrides: Partial<Customer> = {}): Customer {
 describe("deriveFloorLayout", () => {
   it("renders the same total visual capacity as the property customer capacity", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    const layout = deriveFloorLayout(state, STARTER_PROPERTY);
+    const prop = activeProperty(state);
+    const layout = deriveFloorLayout(prop, STARTER_PROPERTY);
 
     const visualSeats = layout.barSeats.length + layout.tables.reduce((sum, table) => sum + table.length, 0);
     expect(visualSeats).toBe(STARTER_PROPERTY.seatingCapacity);
@@ -47,12 +49,13 @@ describe("deriveFloorLayout", () => {
 
   it("keeps seated customers visually stable by arrival order instead of status time", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.customers.push(
+    const prop = activeProperty(state);
+    prop.customers.push(
       customer("cust-2", { arrivalGameMinute: 2, statusEnteredAtGameMinute: 1 }),
       customer("cust-1", { arrivalGameMinute: 1, statusEnteredAtGameMinute: 99 }),
     );
 
-    const layout = deriveFloorLayout(state, STARTER_PROPERTY);
+    const layout = deriveFloorLayout(prop, STARTER_PROPERTY);
 
     expect(layout.barSeats[0]?.id).toBe("cust-1");
     expect(layout.barSeats[1]?.id).toBe("cust-2");
@@ -60,11 +63,12 @@ describe("deriveFloorLayout", () => {
 
   it("places waiting customers into standing capacity before overflow", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     for (let i = 1; i <= 5; i++) {
-      state.customers.push(customer(`wait-${i}`, { status: "waiting_for_seat", seatId: null, arrivalGameMinute: i }));
+      prop.customers.push(customer(`wait-${i}`, { status: "waiting_for_seat", seatId: null, arrivalGameMinute: i }));
     }
 
-    const layout = deriveFloorLayout(state, STARTER_PROPERTY);
+    const layout = deriveFloorLayout(prop, STARTER_PROPERTY);
 
     expect(layout.standingCapacity).toBe(4);
     expect(layout.standingSlots.filter(Boolean)).toHaveLength(4);
@@ -73,10 +77,11 @@ describe("deriveFloorLayout", () => {
 
   it("renders more seats once table/bar_stool equipment is purchased", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    const prop = activeProperty(state);
     commandService.purchaseEquipment(state, new EventBus(), "equip-extra-dining-table");
     commandService.purchaseEquipment(state, new EventBus(), "equip-extra-bar-stools");
 
-    const layout = deriveFloorLayout(state, STARTER_PROPERTY);
+    const layout = deriveFloorLayout(prop, STARTER_PROPERTY);
     const visualSeats = layout.barSeats.length + layout.tables.reduce((sum, table) => sum + table.length, 0);
 
     expect(visualSeats).toBe(STARTER_PROPERTY.seatingCapacity + 8);

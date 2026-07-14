@@ -4,6 +4,7 @@ import { commandService } from "@/services/commandService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { closeDay } from "@/simulation/engine/dayCycle";
 import { accrueDailyPayroll, generateSundayBills, payBill, updateInsolvency } from "@/simulation/engine/finance";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Employee } from "@/types";
 
 function employee(id: string, wagePerShiftCents: number): Employee {
@@ -36,28 +37,31 @@ function employee(id: string, wagePerShiftCents: number): Employee {
 describe("Stage 5 finance", () => {
   it("accrues payroll as an operating expense and payable bill", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(employee("a", 10_000), employee("b", 12_000));
+    const prop = activeProperty(state);
+    prop.employees.push(employee("a", 10_000), employee("b", 12_000));
 
-    const amount = accrueDailyPayroll(state);
+    const amount = accrueDailyPayroll(state, prop);
 
     expect(amount).toBe(22_000);
     expect(state.ledger.some((e) => e.category === "opex_payroll" && e.amount === 22_000)).toBe(true);
     expect(state.ledger.some((e) => e.category === "liability_accrued_payroll" && e.amount === 22_000)).toBe(true);
-    expect(state.bills.find((b) => b.kind === "payroll")?.amount).toBe(22_000);
+    expect(prop.bills.find((b) => b.kind === "payroll")?.amount).toBe(22_000);
   });
 
   it("daily reports include wage payroll in net profit", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(employee("a", 10_000));
+    const prop = activeProperty(state);
+    prop.employees.push(employee("a", 10_000));
     closeDay(state, new EventBus());
 
-    expect(state.dailyReports[0].payrollAccrued).toBe(10_000);
-    expect(state.dailyReports[0].operatingExpenses).toBe(10_000);
-    expect(state.dailyReports[0].netProfit).toBe(-10_000);
+    expect(prop.dailyReports[0].payrollAccrued).toBe(10_000);
+    expect(prop.dailyReports[0].operatingExpenses).toBe(10_000);
+    expect(prop.dailyReports[0].netProfit).toBe(-10_000);
   });
 
   it("generates Sunday lease, utility, sales tax, and loan bills", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    const prop = activeProperty(state);
     state.gameDay = 7;
     state.ledger.push({
       id: "tax",
@@ -67,21 +71,23 @@ describe("Stage 5 finance", () => {
       type: "credit",
       amount: 825,
       description: "tax",
+      propertyId: prop.propertyId,
     });
 
-    generateSundayBills(state, new EventBus());
+    generateSundayBills(state, prop, new EventBus());
 
-    expect(state.bills.some((b) => b.kind === "utilities")).toBe(true);
-    expect(state.bills.some((b) => b.kind === "lease")).toBe(true);
-    expect(state.bills.some((b) => b.kind === "sales_tax" && b.amount === 825)).toBe(true);
+    expect(prop.bills.some((b) => b.kind === "utilities")).toBe(true);
+    expect(prop.bills.some((b) => b.kind === "lease")).toBe(true);
+    expect(prop.bills.some((b) => b.kind === "sales_tax" && b.amount === 825)).toBe(true);
     expect(state.bills.some((b) => b.kind === "loan")).toBe(true);
   });
 
   it("paying a bill reduces cash and clears the liability", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(employee("a", 10_000));
-    accrueDailyPayroll(state);
-    const bill = state.bills[0];
+    const prop = activeProperty(state);
+    prop.employees.push(employee("a", 10_000));
+    accrueDailyPayroll(state, prop);
+    const bill = prop.bills[0];
     state.cash = 50_000;
 
     const result = payBill(state, new EventBus(), bill.id);
@@ -104,20 +110,21 @@ describe("Stage 5 finance", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(state.bills.some((b) => b.kind === "supply_tab" && b.amount === 100)).toBe(true);
+    expect(activeProperty(state).bills.some((b) => b.kind === "supply_tab" && b.amount === 100)).toBe(true);
   });
 
   it("keeps asset_cash entries reconciled to state.cash across a mixed sequence of cash-affecting commands", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    const prop = activeProperty(state);
     const bus = new EventBus();
 
     commandService.placePurchaseOrder(state, bus, [{ inventoryItemId: "inv-bottled-lager", quantity: 5, unitCost: 100 }], "cash");
     commandService.purchaseEquipment(state, bus, "equip-cook-station");
-    state.equipment[state.equipment.length - 1].currentStatus = "failed";
-    commandService.requestContractRepair(state, bus, state.equipment[state.equipment.length - 1].id);
-    state.employees.push(employee("a", 10_000));
-    accrueDailyPayroll(state, bus);
-    payBill(state, bus, state.bills[0].id);
+    prop.equipment[prop.equipment.length - 1].currentStatus = "failed";
+    commandService.requestContractRepair(state, bus, prop.equipment[prop.equipment.length - 1].id);
+    prop.employees.push(employee("a", 10_000));
+    accrueDailyPayroll(state, prop, bus);
+    payBill(state, bus, prop.bills[0].id);
 
     const reconciledCash = state.ledger
       .filter((e) => e.category === "asset_cash")

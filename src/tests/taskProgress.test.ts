@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
 import { describeTask } from "@/utils/taskProgress";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Customer, Order, ServiceTask } from "@/types";
 
 function customer(): Customer {
@@ -66,10 +67,11 @@ function task(type: ServiceTask["type"]): ServiceTask {
 describe("taskProgress immersive labels", () => {
   it("names the specific drink being made, not just the customer", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.customers.push(customer());
-    state.orders.push(order());
+    const prop = activeProperty(state);
+    prop.customers.push(customer());
+    prop.orders.push(order());
 
-    const description = describeTask(state, task("prepare_drink"));
+    const description = describeTask(prop, task("prepare_drink"));
     expect(description).toContain("Margarita");
     expect(description).toContain("Jamie Rivera");
     expect(description).toContain("Making");
@@ -78,19 +80,21 @@ describe("taskProgress immersive labels", () => {
 
   it("uses the right preposition for delivering vs. making", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.customers.push(customer());
-    state.orders.push(order());
+    const prop = activeProperty(state);
+    prop.customers.push(customer());
+    prop.orders.push(order());
 
-    expect(describeTask(state, task("deliver_drink"))).toBe("Delivering Margarita to Jamie Rivera (60%)");
-    expect(describeTask(state, task("prepare_drink"))).toBe("Making Margarita for Jamie Rivera (60%)");
+    expect(describeTask(prop, task("deliver_drink"))).toBe("Delivering Margarita to Jamie Rivera (60%)");
+    expect(describeTask(prop, task("prepare_drink"))).toBe("Making Margarita for Jamie Rivera (60%)");
   });
 
   it("still falls back to just the customer name for non-order tasks like take_order", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.customers.push(customer());
+    const prop = activeProperty(state);
+    prop.customers.push(customer());
 
     const takeOrderTask = task("take_order");
     takeOrderTask.orderId = null;
-    expect(describeTask(state, takeOrderTask)).toBe("Taking an order from Jamie Rivera (60%)");
+    expect(describeTask(prop, takeOrderTask)).toBe("Taking an order from Jamie Rivera (60%)");
   });
 });

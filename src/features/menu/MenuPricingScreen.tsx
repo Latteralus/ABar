@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatCents } from "@/utils/money";
 import { classifyPriceTier, priceTierTone } from "@/utils/pricing";
 import { baseCostCentsForProduct } from "@/simulation/engine/orderProcessing";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { MenuListing } from "@/types";
 
 interface Row {
@@ -21,14 +22,15 @@ export function MenuPricingScreen() {
   const setMenuPrice = useGameStore((s) => s.setMenuPrice);
   const setMenuActive = useGameStore((s) => s.setMenuActive);
   if (!state) return null;
+  const prop = activeProperty(state);
 
-  const rows: Row[] = state.menu.map((listing) => {
+  const rows: Row[] = prop.menu.map((listing) => {
     const product = PRODUCT_CATALOG.find((p) => p.id === listing.productId)!;
     return {
       listing,
       name: product.name,
       category: product.category,
-      costCents: baseCostCentsForProduct(state, listing.productId),
+      costCents: baseCostCentsForProduct(prop, listing.productId),
       suggestedPrice: product.suggestedPrice,
     };
   });

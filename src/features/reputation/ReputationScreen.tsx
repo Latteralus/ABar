@@ -6,6 +6,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { TrendChart } from "@/components/ui/TrendChart";
 import { formatPercent } from "@/utils/format";
 import { reputationDailyChange, reputationWeeklyChange } from "@/simulation/engine/reputation";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { ReputationDayRecord, Review } from "@/types";
 
 function signed(value: number): string {
@@ -14,20 +15,21 @@ function signed(value: number): string {
 
 export function ReputationScreen() {
   const state = useGameStore((s) => s.state);
+  const prop = state ? activeProperty(state) : null;
   // Memoized on .length, not the array reference — see ReportsScreen/FinancialsScreen.
   const scoreSeries = useMemo(
-    () => state?.reputation.history.map((r) => ({ day: r.gameDay, value: r.score })) ?? [],
+    () => prop?.reputation.history.map((r) => ({ day: r.gameDay, value: r.score })) ?? [],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: see comment above.
-    [state?.reputation.history.length],
+    [prop?.reputation.history.length],
   );
-  if (!state) return null;
+  if (!state || !prop) return null;
 
-  const latest = state.reputation.history[state.reputation.history.length - 1] ?? null;
-  const recentHistory = [...state.reputation.history].slice(-14).reverse();
-  const recentReviews = [...state.reviews].slice(-25).reverse();
+  const latest = prop.reputation.history[prop.reputation.history.length - 1] ?? null;
+  const recentHistory = [...prop.reputation.history].slice(-14).reverse();
+  const recentReviews = [...prop.reviews].slice(-25).reverse();
 
-  const dailyChange = reputationDailyChange(state);
-  const weeklyChange = reputationWeeklyChange(state);
+  const dailyChange = reputationDailyChange(prop);
+  const weeklyChange = reputationWeeklyChange(prop);
 
   const historyColumns: DataTableColumn<ReputationDayRecord>[] = [
     { key: "day", header: "Day", render: (r) => `Day ${r.gameDay}` },
@@ -51,7 +53,7 @@ export function ReputationScreen() {
 
       <Card title="Service Reputation">
         <div className="card-grid">
-          <StatTile label="Current Score" value={formatPercent(state.reputation.score)} />
+          <StatTile label="Current Score" value={formatPercent(prop.reputation.score)} />
           <StatTile
             label="Daily Change"
             value={signed(dailyChange)}

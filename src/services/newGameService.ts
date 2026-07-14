@@ -1,12 +1,10 @@
 import { STARTING_CONDITIONS } from "@/config/gameConfig";
 import { ECONOMY_CONFIG } from "@/config/economyConfig";
 import { LOAN_CONFIG } from "@/config/loanConfig";
-import { REPUTATION_CONFIG } from "@/config/reputationConfig";
-import { INVENTORY_CATALOG } from "@/data/products/inventoryCatalog";
-import { PRODUCT_CATALOG } from "@/data/products/products";
 import { STARTER_PROPERTY } from "@/data/properties/starterProperty";
 import { createId } from "./idService";
-import type { AcquisitionType, GameState, InventoryItem, Loan, MenuListing } from "@/types";
+import { createOwnedPropertyState } from "./propertyStateFactory";
+import type { AcquisitionType, GameState, Loan } from "@/types";
 
 export interface NewGameParams {
   saveName: string;
@@ -20,30 +18,6 @@ function generateSeed(): number {
     return crypto.getRandomValues(new Uint32Array(1))[0];
   }
   return Math.floor(Math.random() * 0xffffffff);
-}
-
-function buildStartingInventory(): InventoryItem[] {
-  return INVENTORY_CATALOG.map((entry) => ({
-    id: entry.id,
-    name: entry.name,
-    category: entry.category,
-    unit: entry.unit,
-    quantityOnHand: 0,
-    averageUnitCost: entry.baseUnitCostCents,
-    storageLocation: entry.storageLocation,
-    shelfLifeGameMinutes: entry.shelfLifeGameMinutes,
-    daysSinceLastRestock: 0,
-    requiresRefrigeration: entry.requiresRefrigeration,
-    requiresFreezer: entry.requiresFreezer,
-    reorderMinimum: entry.reorderMinimum,
-    reorderTarget: entry.reorderTarget,
-    pendingDeliveryQuantity: 0,
-    recentUsage: 0,
-  }));
-}
-
-function buildStartingMenu(): MenuListing[] {
-  return PRODUCT_CATALOG.map((product) => ({ productId: product.id, price: product.suggestedPrice, isActive: false }));
 }
 
 function buildLoan(): Loan {
@@ -69,6 +43,8 @@ export function createNewGameState(params: NewGameParams): GameState {
   const loan = params.acceptLoan ? buildLoan() : null;
   const cash = STARTING_CONDITIONS.startingCash + (loan ? loan.principal : 0);
 
+  const starterPropertyState = createOwnedPropertyState(STARTER_PROPERTY, params.acquisitionType, 1, 0);
+
   return {
     saveId: createId("save"),
     saveName: params.saveName,
@@ -82,28 +58,11 @@ export function createNewGameState(params: NewGameParams): GameState {
     autoOpenEnabled: false,
 
     cash,
-    property: { propertyId: STARTER_PROPERTY.id, acquisitionType: params.acquisitionType, acquiredAtGameMinute: 0 },
-    propertyId: STARTER_PROPERTY.id,
     loan,
     policies: { barTipSharePercent: ECONOMY_CONFIG.tips.barSharePercent },
 
-    employees: [],
-    customers: [],
-    customerGroups: [],
-
-    inventory: buildStartingInventory(),
-    purchaseOrders: [],
-    equipment: STARTER_PROPERTY.existingEquipment.map((e) => ({ ...e, currentStatus: "operational" as const, repairHistory: [] })),
-    attractions: [],
-
-    menu: buildStartingMenu(),
-
-    barCleanliness: 100,
-
-    tabs: [],
-    receipts: [],
-    tasks: [],
-    orders: [],
+    properties: [starterPropertyState],
+    activePropertyId: STARTER_PROPERTY.id,
 
     ledger: [
       {
@@ -150,9 +109,6 @@ export function createNewGameState(params: NewGameParams): GameState {
     ],
     bills: [],
     insolvency: null,
-    reputation: { score: REPUTATION_CONFIG.startingScore, history: [] },
-    reviews: [],
-    activePromotions: [],
     activityLog: [
       {
         id: createId("log"),
@@ -163,7 +119,6 @@ export function createNewGameState(params: NewGameParams): GameState {
         message: `${params.saveName} opened its doors for the first time.`,
       },
     ],
-    dailyReports: [],
 
     counters: { nextTabNumber: 1, nextReceiptNumber: 1, nextOrderNumber: 1, nextPurchaseOrderNumber: 1 },
 

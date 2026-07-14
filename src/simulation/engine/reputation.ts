@@ -2,7 +2,7 @@ import { REPUTATION_CONFIG } from "@/config/reputationConfig";
 import { clampRound } from "@/utils/clamp";
 import { formatPercent } from "@/utils/format";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { DailyReport, GameState } from "@/types";
+import type { DailyReport, GameState, OwnedPropertyState } from "@/types";
 import { logActivity } from "./activityLogger";
 
 interface Factor {
@@ -17,7 +17,7 @@ interface Factor {
  * customers) — that's intentional, it reflects how compounding problems really do hurt reputation
  * more than any single one.
  */
-function computeDailyFactors(state: GameState, report: DailyReport): Factor[] {
+function computeDailyFactors(prop: OwnedPropertyState, report: DailyReport): Factor[] {
   const factors: Factor[] = [];
 
   if (report.customerCount > 0) {
@@ -48,23 +48,23 @@ function computeDailyFactors(state: GameState, report: DailyReport): Factor[] {
     factors.push({ label: "Customers removed for intoxication", delta: -1 });
   }
 
-  if (state.barCleanliness < 50) {
+  if (prop.barCleanliness < 50) {
     factors.push({ label: "Facility cleanliness issues", delta: -1 });
-  } else if (state.barCleanliness >= 90) {
+  } else if (prop.barCleanliness >= 90) {
     factors.push({ label: "Spotless facility", delta: 0.5 });
   }
 
-  const problemEquipmentCount = state.equipment.filter((e) =>
+  const problemEquipmentCount = prop.equipment.filter((e) =>
     (REPUTATION_CONFIG.problemEquipmentStatuses as readonly string[]).includes(e.currentStatus),
   ).length;
   if (problemEquipmentCount > 0) {
     factors.push({ label: "Equipment problems", delta: -1 });
   }
 
-  if (state.employees.length > 0) {
+  if (prop.employees.length > 0) {
     const avgSkill =
-      state.employees.reduce((sum, e) => sum + (e.skills.accuracy + e.skills.charisma + e.skills.bartending) / 3, 0) /
-      state.employees.length;
+      prop.employees.reduce((sum, e) => sum + (e.skills.accuracy + e.skills.charisma + e.skills.bartending) / 3, 0) /
+      prop.employees.length;
     if (avgSkill >= 75) {
       factors.push({ label: "Skilled, personable staff", delta: 1 });
     } else if (avgSkill <= 35) {
@@ -76,13 +76,13 @@ function computeDailyFactors(state: GameState, report: DailyReport): Factor[] {
 }
 
 /** Called once per closed day (dayCycle.closeDay) — moves the score gradually, never in one big jump. */
-export function updateReputation(state: GameState, bus: EventBus, report: DailyReport): void {
-  const factors = computeDailyFactors(state, report);
+export function updateReputation(state: GameState, prop: OwnedPropertyState, bus: EventBus, report: DailyReport): void {
+  const factors = computeDailyFactors(prop, report);
   const rawDelta = factors.reduce((sum, f) => sum + f.delta, 0);
   const appliedDelta = rawDelta * REPUTATION_CONFIG.dampingFactor;
 
-  const previousScore = state.reputation.score;
-  state.reputation.score = clampRound(previousScore + appliedDelta);
+  const previousScore = prop.reputation.score;
+  prop.reputation.score = clampRound(previousScore + appliedDelta);
 
   const positiveFactors = factors
     .filter((f) => f.delta > 0)
@@ -93,9 +93,9 @@ export function updateReputation(state: GameState, bus: EventBus, report: DailyR
     .sort((a, b) => a.delta - b.delta)
     .map((f) => f.label);
 
-  state.reputation.history.push({
+  prop.reputation.history.push({
     gameDay: report.gameDay,
-    score: state.reputation.score,
+    score: prop.reputation.score,
     positiveFactors,
     negativeFactors,
   });
@@ -106,29 +106,29 @@ export function updateReputation(state: GameState, bus: EventBus, report: DailyR
       state,
       bus,
       "reputation",
-      `Reputation ${direction} to ${formatPercent(state.reputation.score)} after Day ${report.gameDay}.`,
+      `Reputation ${direction} to ${formatPercent(prop.reputation.score)} after Day ${report.gameDay}.`,
     );
   }
 }
 
 /** Change since the previous recorded day, or 0 if there's no prior record. */
-export function reputationDailyChange(state: GameState): number {
-  const history = state.reputation.history;
+export function reputationDailyChange(prop: OwnedPropertyState): number {
+  const history = prop.reputation.history;
   if (history.length < 2) return 0;
   return clampRound(history[history.length - 1].score - history[history.length - 2].score, -100, 100);
 }
 
 /** Change over the last 7 recorded days (or however many exist, if fewer). */
-export function reputationWeeklyChange(state: GameState): number {
-  const history = state.reputation.history;
+export function reputationWeeklyChange(prop: OwnedPropertyState): number {
+  const history = prop.reputation.history;
   if (history.length < 2) return 0;
   const weekAgoIndex = Math.max(0, history.length - 1 - 7);
   return clampRound(history[history.length - 1].score - history[weekAgoIndex].score, -100, 100);
 }
 
 /** Score-to-demand-multiplier curve (Master Plan Section 30: advertising/reputation modify demand probabilities, never guarantee customers). */
-export function reputationDemandMultiplier(state: GameState): number {
-  const score = state.reputation.score;
+export function reputationDemandMultiplier(prop: OwnedPropertyState): number {
+  const score = prop.reputation.score;
   if (score <= 50) {
     const t = score / 50;
     return (

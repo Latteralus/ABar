@@ -4,6 +4,7 @@ import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { closeTabAndPay } from "@/simulation/engine/payments";
 import { ECONOMY_CONFIG } from "@/config/economyConfig";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Customer } from "@/types";
 
 function makeCustomer(overrides: Partial<Customer> = {}): Customer {
@@ -38,7 +39,8 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
 describe("closeTabAndPay", () => {
   it("applies sales tax and tracks it separately from revenue", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.tabs.push({
+    const prop = activeProperty(state);
+    prop.tabs.push({
       id: "tab-1",
       tabNumber: 1,
       customerId: "cust-1",
@@ -62,9 +64,9 @@ describe("closeTabAndPay", () => {
     const customer = makeCustomer();
     const startingCash = state.cash;
 
-    closeTabAndPay(state, rng, bus, customer, null);
+    closeTabAndPay(state, prop, rng, bus, customer, null);
 
-    const tab = state.tabs[0];
+    const tab = prop.tabs[0];
     expect(tab.subtotal).toBe(1000);
     expect(tab.tax).toBe(Math.round(1000 * ECONOMY_CONFIG.salesTaxRate));
     expect(tab.status).toBe("closed");
@@ -81,7 +83,8 @@ describe("closeTabAndPay", () => {
 
   it("deducts a processing fee only when the customer pays by card", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.tabs.push({
+    const prop = activeProperty(state);
+    prop.tabs.push({
       id: "tab-1",
       tabNumber: 1,
       customerId: "cust-1",
@@ -102,17 +105,18 @@ describe("closeTabAndPay", () => {
 
     const bus = new EventBus();
     const alwaysCardRng = { chance: () => true, next: () => 0.5 } as unknown as SeededRandom;
-    closeTabAndPay(state, alwaysCardRng, bus, makeCustomer(), null);
+    closeTabAndPay(state, prop, alwaysCardRng, bus, makeCustomer(), null);
 
     const feeEntry = state.ledger.find((e) => e.category === "opex_card_processing_fee");
     expect(feeEntry).toBeTruthy();
-    expect(state.tabs[0].paymentMethod).toBe("card");
+    expect(prop.tabs[0].paymentMethod).toBe("card");
   });
 
   it("uses the player-adjustable bar tip share policy", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     state.policies.barTipSharePercent = 0.5;
-    state.tabs.push({
+    prop.tabs.push({
       id: "tab-1",
       tabNumber: 1,
       customerId: "cust-1",
@@ -131,9 +135,9 @@ describe("closeTabAndPay", () => {
       status: "open",
     });
 
-    closeTabAndPay(state, { chance: () => false } as unknown as SeededRandom, new EventBus(), makeCustomer({ satisfaction: 100 }), null);
+    closeTabAndPay(state, prop, { chance: () => false } as unknown as SeededRandom, new EventBus(), makeCustomer({ satisfaction: 100 }), null);
 
-    const tip = state.tabs[0].tip;
+    const tip = prop.tabs[0].tip;
     const barTipEntry = state.ledger.find((e) => e.category === "revenue_bar_tip_share");
     expect(barTipEntry?.amount).toBe(Math.round(tip * 0.5));
   });

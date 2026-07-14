@@ -1,5 +1,5 @@
 import { createId } from "@/services/idService";
-import type { GameState, LedgerCategory, LedgerEntry } from "@/types";
+import type { EntityId, GameState, LedgerCategory, LedgerEntry } from "@/types";
 
 /** Shared ledger-entry constructor — was copy-pasted identically into 6 engine files (finance, payments,
  * employeeAI, spoilage, attractionRevenue, attractionTasks); this is the one definition now. */
@@ -13,6 +13,8 @@ interface CashMovementOptions {
   category?: LedgerCategory;
   description: string;
   relatedEntityId?: string;
+  /** Which owned property this cash movement belongs to — omit for company-wide movements (e.g. the startup loan). */
+  propertyId?: EntityId;
 }
 
 /**
@@ -31,6 +33,7 @@ export function spendCash(state: GameState, amountCents: number, options: CashMo
       amount: amountCents,
       description: options.description,
       relatedEntityId: options.relatedEntityId,
+      propertyId: options.propertyId,
     });
   }
   postLedger(state, {
@@ -39,6 +42,7 @@ export function spendCash(state: GameState, amountCents: number, options: CashMo
     amount: amountCents,
     description: options.description,
     relatedEntityId: options.relatedEntityId,
+    propertyId: options.propertyId,
   });
 }
 
@@ -52,6 +56,7 @@ export function receiveCash(state: GameState, amountCents: number, options: Cash
       amount: amountCents,
       description: options.description,
       relatedEntityId: options.relatedEntityId,
+      propertyId: options.propertyId,
     });
   }
   postLedger(state, {
@@ -60,5 +65,6 @@ export function receiveCash(state: GameState, amountCents: number, options: Cash
     amount: amountCents,
     description: options.description,
     relatedEntityId: options.relatedEntityId,
+    propertyId: options.propertyId,
   });
 }

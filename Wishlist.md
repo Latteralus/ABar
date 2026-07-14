@@ -16,3 +16,13 @@ After Financial Stage, wishlist items are tracked here in no specific order.
 
 1. **Real estate and neighborhoods.** Build a property market where the player can view, lease, buy, and move between commercial properties with different customer capacity, attraction space, equipment space, rent/lease terms, and neighborhood demand profiles.
 2. **Employee-relations reactions to policies.** Adjustable tip share exists, but employees do not yet negotiate, quit, or react to compensation/benefit policies.
+
+## Reported Items Needing Investigation:
+
+1. Maintenance Employees do not seem to fix attractions or other items. We should be running a check to verify item condition and ensure maintenance people are working.
+2. Recent Reviews sometimes mention food when the bar is not yet serving any food (it's not on the menu)
+3. Attractions should be per-person financially, so if two people join a Pool game they should both be paying the fee, this applies to all attractions.
+4. Items should take a while to degrade, we should not see anything go from 100% to 0% in a single day. Instead we should see a slow decay over several days, the same with cleanliness, it should take a while for these to degrade.
+5. A proper closing order for customers, we should simulate a "Final Call" at 1am (one hour before close at 2pm) then at 1:30am we should start seeing customers finishing up and leaving in time for 2am close. This ensures all customers have paid and settled their tabs by end of day.
+6. Idea: "Activities" page that allows the creation of Pool/Dart teams, the pub is able to sponsor a team and depending on how they do throughout the season it will positively affect the reputation of the business.
+7. A much deeper customer and employee system. I'd like the people to seem more immersive to the player.

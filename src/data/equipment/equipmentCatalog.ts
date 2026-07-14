@@ -1,5 +1,5 @@
 import { isEquipmentUsable } from "@/simulation/engine/equipmentMaintenance";
-import type { EquipmentCategory, GameState, Property } from "@/types";
+import type { EquipmentCategory, OwnedPropertyState, Property } from "@/types";
 
 /** Static metadata for equipment the player may purchase (Master Plan Section 33). Starter equipment lives on the Property instead — see starterProperty.ts. */
 export interface EquipmentCatalogEntry {
@@ -244,16 +244,16 @@ export function getEquipmentCatalogEntry(id: string): EquipmentCatalogEntry {
   return entry;
 }
 
-export function usedEquipmentSpace(state: GameState): number {
-  return state.equipment.reduce((sum, e) => sum + (e.spaceUnits ?? 0), 0);
+export function usedEquipmentSpace(prop: OwnedPropertyState): number {
+  return prop.equipment.reduce((sum, e) => sum + (e.spaceUnits ?? 0), 0);
 }
 
-export function isUpgradeForOwnedEquipment(state: GameState, entry: EquipmentCatalogEntry): boolean {
-  return state.equipment.some((e) => e.category === entry.category && (e.tier ?? 1) < entry.tier);
+export function isUpgradeForOwnedEquipment(prop: OwnedPropertyState, entry: EquipmentCatalogEntry): boolean {
+  return prop.equipment.some((e) => e.category === entry.category && (e.tier ?? 1) < entry.tier);
 }
 
-export function wouldExceedEquipmentSpace(state: GameState, property: Property, entry: EquipmentCatalogEntry): boolean {
-  return usedEquipmentSpace(state) + entry.spaceUnits > property.equipmentFloorSpaceUnits;
+export function wouldExceedEquipmentSpace(prop: OwnedPropertyState, property: Property, entry: EquipmentCatalogEntry): boolean {
+  return usedEquipmentSpace(prop) + entry.spaceUnits > property.equipmentFloorSpaceUnits;
 }
 
 export interface EffectiveSeatingCapacity {
@@ -269,10 +269,10 @@ export interface EffectiveSeatingCapacity {
  * property base, never mutate Property, which is shared catalog data). Extra furniture raises
  * total occupancy (customerCapacity), not just the seated/standing mix.
  */
-export function effectiveSeatingCapacity(state: GameState, property: Property): EffectiveSeatingCapacity {
+export function effectiveSeatingCapacity(prop: OwnedPropertyState, property: Property): EffectiveSeatingCapacity {
   let extraBarSeats = 0;
   let extraTableSeats = 0;
-  for (const equipment of state.equipment) {
+  for (const equipment of prop.equipment) {
     if (!isEquipmentUsable(equipment)) continue; // a broken stool doesn't seat anyone
     if (equipment.category === "bar_stool") extraBarSeats += equipment.capacity ?? 0;
     if (equipment.category === "table") extraTableSeats += equipment.capacity ?? 0;

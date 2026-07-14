@@ -10,6 +10,7 @@ import { outstandingBillTotal } from "@/simulation/engine/finance";
 import { summarizeDay } from "@/simulation/engine/ledgerSummary";
 import { summarizeBalanceSheet } from "@/simulation/engine/balanceSheet";
 import { cashHistoryByDay, summarizeCashFlow } from "@/simulation/engine/cashFlow";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import { ReceiptView } from "./ReceiptView";
 import type { Bill, LedgerEntry, Receipt } from "@/types";
 
@@ -31,17 +32,19 @@ export function FinancialsScreen() {
     [state?.gameDay, state?.ledger.length],
   );
   if (!state) return null;
+  const prop = activeProperty(state);
 
   const today = summarizeDay(state.ledger, state.gameDay);
   const barTipShareToday = state.ledger
     .filter((e) => e.gameDay === state.gameDay && e.category === "revenue_bar_tip_share")
     .reduce((s, e) => s + e.amount, 0);
   const barTipShareAllTime = state.ledger.filter((e) => e.category === "revenue_bar_tip_share").reduce((s, e) => s + e.amount, 0);
-  const employeeTipShareAllTime = state.employees.reduce((s, e) => s + e.performance.tipsEarnedCents, 0);
+  const employeeTipShareAllTime = prop.employees.reduce((s, e) => s + e.performance.tipsEarnedCents, 0);
   const recentLedger = [...state.ledger].slice(-30).reverse();
-  const recentReceipts = [...state.receipts].slice(-25).reverse();
-  const selectedReceipt = state.receipts.find((r) => r.id === selectedReceiptId) ?? null;
-  const openBills = state.bills.filter((b) => b.status !== "paid").sort((a, b) => a.dueGameDay - b.dueGameDay);
+  const recentReceipts = [...prop.receipts].slice(-25).reverse();
+  const selectedReceipt = prop.receipts.find((r) => r.id === selectedReceiptId) ?? null;
+  const allBills = [...state.bills, ...prop.bills];
+  const openBills = allBills.filter((b) => b.status !== "paid").sort((a, b) => a.dueGameDay - b.dueGameDay);
   const balanceSheet = summarizeBalanceSheet(state);
   const cashFlowFromDay = cashFlowRange === "today" ? state.gameDay : Math.max(1, state.gameDay - 6);
   const cashFlow = summarizeCashFlow(state, cashFlowFromDay, state.gameDay);
@@ -101,8 +104,8 @@ export function FinancialsScreen() {
           <StatTile label="Net Profit" value={formatCents(today.netProfit)} tone={today.netProfit >= 0 ? "positive" : "negative"} />
           <StatTile
             label="Open Bills"
-            value={formatCents(outstandingBillTotal(state))}
-            tone={outstandingBillTotal(state) > 0 ? "negative" : "neutral"}
+            value={formatCents(outstandingBillTotal(allBills))}
+            tone={outstandingBillTotal(allBills) > 0 ? "negative" : "neutral"}
           />
           <StatTile label="Loan Balance" value={formatCents(state.loan?.remainingBalance ?? 0)} />
         </div>

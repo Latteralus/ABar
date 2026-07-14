@@ -1,7 +1,7 @@
 import { getAdvertisingCatalogEntry } from "@/data/advertising/advertisingCatalog";
 import { getProduct } from "@/data/products/products";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { ActivePromotion, Cents, GameState, PromotionCatalogEntry } from "@/types";
+import type { ActivePromotion, Cents, GameState, OwnedPropertyState, PromotionCatalogEntry } from "@/types";
 import { logActivity } from "./activityLogger";
 
 /**
@@ -28,9 +28,9 @@ function promotionDemandContribution(entry: PromotionCatalogEntry, promo: Active
 }
 
 /** Combined bonus from every active campaign/promotion, applied as a multiplier on arrival demand — never guarantees customers, only shifts the odds (Master Plan Section 30). */
-export function activePromotionDemandMultiplier(state: GameState): number {
+export function activePromotionDemandMultiplier(state: GameState, prop: OwnedPropertyState): number {
   let totalBonus = 0;
-  for (const promo of state.activePromotions) {
+  for (const promo of prop.activePromotions) {
     const entry = getAdvertisingCatalogEntry(promo.catalogId);
     totalBonus += promotionDemandContribution(entry, promo, state.gameDay);
   }
@@ -38,11 +38,11 @@ export function activePromotionDemandMultiplier(state: GameState): number {
 }
 
 /** Applies the largest applicable happy-hour/drink-special discount, if any is currently running — a real price change, not cosmetic. */
-export function effectivePrice(state: GameState, productId: string, basePrice: Cents): Cents {
+export function effectivePrice(state: GameState, prop: OwnedPropertyState, productId: string, basePrice: Cents): Cents {
   const product = getProduct(productId);
   let bestDiscountPercent = 0;
 
-  for (const promo of state.activePromotions) {
+  for (const promo of prop.activePromotions) {
     if (state.gameDay < promo.startedGameDay || state.gameDay > promo.endsGameDay) continue;
     const entry = getAdvertisingCatalogEntry(promo.catalogId);
     if (!entry.priceDiscountPercent) continue;
@@ -56,16 +56,16 @@ export function effectivePrice(state: GameState, productId: string, basePrice: C
 }
 
 /** Removes promotions past their end day — called once per day close. No historical record is kept once a promotion expires (its cost stays visible in the ledger, but per-campaign reporting only covers what's currently active — a deliberate scope cut). */
-export function expireEndedPromotions(state: GameState, bus: EventBus): void {
+export function expireEndedPromotions(state: GameState, prop: OwnedPropertyState, bus: EventBus): void {
   const stillActive: ActivePromotion[] = [];
-  for (const promo of state.activePromotions) {
+  for (const promo of prop.activePromotions) {
     if (state.gameDay > promo.endsGameDay) {
       logActivity(state, bus, "advertising", `${promo.name} campaign ended.`);
     } else {
       stillActive.push(promo);
     }
   }
-  state.activePromotions = stillActive;
+  prop.activePromotions = stillActive;
 }
 
 export interface PromotionStats {
@@ -77,11 +77,11 @@ export interface PromotionStats {
 }
 
 /** Rough, non-audited estimate for the reporting UI — same spirit as Attraction.estimatedSecondarySalesCents elsewhere. */
-export function computePromotionStats(state: GameState): PromotionStats[] {
-  const recentReports = state.dailyReports.slice(-7);
+export function computePromotionStats(state: GameState, prop: OwnedPropertyState): PromotionStats[] {
+  const recentReports = prop.dailyReports.slice(-7);
   const avgDailyCustomers = recentReports.length > 0 ? recentReports.reduce((s, r) => s + r.customerCount, 0) / recentReports.length : 0;
 
-  return state.activePromotions.map((promo) => {
+  return prop.activePromotions.map((promo) => {
     const entry = getAdvertisingCatalogEntry(promo.catalogId);
     const contribution = promotionDemandContribution(entry, promo, state.gameDay);
     return {

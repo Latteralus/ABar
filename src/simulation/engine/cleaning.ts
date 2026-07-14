@@ -1,16 +1,16 @@
 import { CLEANLINESS_CONFIG } from "@/config/facilityConfig";
 import { createServiceTask } from "@/simulation/tasks/taskQueue";
 import { rolesFor } from "@/simulation/tasks/roleEligibility";
-import type { GameState } from "@/types";
+import type { GameState, OwnedPropertyState } from "@/types";
 
 /** Queues high-priority cleaning once cleanliness drops below the trigger threshold (Section 22/25). */
-export function ensureCleaningTasks(state: GameState): void {
-  if (state.barCleanliness >= CLEANLINESS_CONFIG.taskTriggerThreshold) return;
+export function ensureCleaningTasks(state: GameState, prop: OwnedPropertyState): void {
+  if (prop.barCleanliness >= CLEANLINESS_CONFIG.taskTriggerThreshold) return;
 
-  const hasPendingCleanTask = state.tasks.some((t) => t.type === "clean_bar" && t.status !== "complete" && t.status !== "cancelled");
+  const hasPendingCleanTask = prop.tasks.some((t) => t.type === "clean_bar" && t.status !== "complete" && t.status !== "cancelled");
   if (hasPendingCleanTask) return;
 
-  state.tasks.push(
+  prop.tasks.push(
     createServiceTask({
       type: "clean_bar",
       eligibleRoles: rolesFor("clean_bar"),

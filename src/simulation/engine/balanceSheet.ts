@@ -29,20 +29,28 @@ function netLedgerBalance(state: GameState, category: LedgerCategory): Cents {
 
 /**
  * Assets/liabilities/equity as of right now, derived from live state and the ledger — nothing
- * here is stored. Loan liability reads `state.loan` directly rather than the ledger: accrued
- * interest is tracked on the Loan object and was never mirrored into a `liability_loan` credit
- * (`finance.ts`'s `runSundayBilling` only posts the `opex_loan_interest` debit side), so the
- * ledger alone would understate it. Retained earnings is a plug (`totalEquity - ownerCapital`) —
- * this simulation isn't strict double-entry, so it honestly represents "whatever equity is left
- * over," not a separately-tracked cumulative net income figure.
+ * here is stored. Consolidated across every owned property (Real Estate/Neighborhoods), not just
+ * the active one — a company balance sheet reflects everything the player owns. Loan liability
+ * reads `state.loan` directly rather than the ledger: accrued interest is tracked on the Loan
+ * object and was never mirrored into a `liability_loan` credit (`finance.ts`'s `runSundayBilling`
+ * only posts the `opex_loan_interest` debit side), so the ledger alone would understate it.
+ * Retained earnings is a plug (`totalEquity - ownerCapital`) — this simulation isn't strict
+ * double-entry, so it honestly represents "whatever equity is left over," not a separately-tracked
+ * cumulative net income figure.
  */
 export function summarizeBalanceSheet(state: GameState): BalanceSheetSummary {
   const cash = state.cash;
-  const inventoryValue = state.inventory.reduce((sum, i) => sum + i.quantityOnHand * i.averageUnitCost, 0);
-  const equipmentValue = state.equipment.reduce((sum, e) => sum + e.purchasePrice, 0);
-  const attractionValue = state.attractions.reduce((sum, a) => sum + getAttractionCatalogEntryForCategory(a.category).purchasePrice, 0);
-  const property = getProperty(state.propertyId);
-  const propertyValue = state.property?.acquisitionType === "buy" ? property.purchasePrice : 0;
+  let inventoryValue = 0;
+  let equipmentValue = 0;
+  let attractionValue = 0;
+  let propertyValue = 0;
+  for (const prop of state.properties) {
+    inventoryValue += prop.inventory.reduce((sum, i) => sum + i.quantityOnHand * i.averageUnitCost, 0);
+    equipmentValue += prop.equipment.reduce((sum, e) => sum + e.purchasePrice, 0);
+    attractionValue += prop.attractions.reduce((sum, a) => sum + getAttractionCatalogEntryForCategory(a.category).purchasePrice, 0);
+    const property = getProperty(prop.propertyId);
+    propertyValue += prop.acquisitionType === "buy" ? property.purchasePrice : 0;
+  }
   const totalAssets = cash + inventoryValue + equipmentValue + attractionValue + propertyValue;
 
   const loanPayable = state.loan ? state.loan.remainingBalance + state.loan.interestAccrued : 0;

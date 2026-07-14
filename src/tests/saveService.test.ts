@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { saveService } from "@/services/saveService";
 import { createNewGameState } from "@/services/newGameService";
 import { SAVE_CONFIG } from "@/config/gameConfig";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 
 describe("saveService", () => {
   beforeEach(() => {
@@ -44,17 +45,46 @@ describe("saveService", () => {
 
   it("backfills currentStatus/repairHistory on equipment from a pre-Stage-4 (v3) save", () => {
     const state = createNewGameState({ saveName: "Old Save", acquisitionType: "lease", acceptLoan: false });
-    // Simulate a save written before Stage 4 added these fields.
-    state.equipment = state.equipment.map(
+    const prop = activeProperty(state);
+    // Simulate a save written before Stage 4 added these fields, and before v10 (Real Estate)
+    // moved every property-specific field off the top-level state onto a per-property bundle —
+    // i.e. the flat shape a v3 save actually had on disk.
+    const equipmentWithoutStatus = prop.equipment.map(
       ({ currentStatus: _currentStatus, repairHistory: _repairHistory, ...rest }) => rest,
-    ) as typeof state.equipment;
-    const rawEnvelope = { version: 3, savedAtIso: new Date().toISOString(), state };
+    );
+    const legacyState: Record<string, unknown> = { ...state };
+    delete legacyState.properties;
+    delete legacyState.activePropertyId;
+    Object.assign(legacyState, {
+      propertyId: prop.propertyId,
+      employees: prop.employees,
+      customers: prop.customers,
+      customerGroups: prop.customerGroups,
+      inventory: prop.inventory,
+      purchaseOrders: prop.purchaseOrders,
+      equipment: equipmentWithoutStatus,
+      attractions: prop.attractions,
+      menu: prop.menu,
+      barCleanliness: prop.barCleanliness,
+      tabs: prop.tabs,
+      receipts: prop.receipts,
+      tasks: prop.tasks,
+      orders: prop.orders,
+      reputation: prop.reputation,
+      reviews: prop.reviews,
+      activePromotions: prop.activePromotions,
+      dailyReports: prop.dailyReports,
+      bills: [...state.bills, ...prop.bills],
+    });
+
+    const rawEnvelope = { version: 3, savedAtIso: new Date().toISOString(), state: legacyState };
     window.localStorage.setItem(`${SAVE_CONFIG.localStorageKeyPrefix}${state.saveId}`, JSON.stringify(rawEnvelope));
 
     const loaded = saveService.load(state.saveId);
 
     expect(loaded).not.toBeNull();
-    for (const equipment of loaded!.equipment) {
+    const loadedProp = activeProperty(loaded!);
+    for (const equipment of loadedProp.equipment) {
       expect(equipment.currentStatus).toBe("operational");
       expect(equipment.repairHistory).toEqual([]);
     }

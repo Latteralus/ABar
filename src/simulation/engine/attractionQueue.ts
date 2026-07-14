@@ -6,15 +6,15 @@ import { attractionLabel, interruptAttractionSession, startAttractionSession } f
 import { isAttractionUsable } from "./attractionCondition";
 import { logActivity } from "./activityLogger";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { Attraction, AttractionQueueEntry, Customer, EntityId, GameState } from "@/types";
+import type { Attraction, AttractionQueueEntry, Customer, EntityId, GameState, OwnedPropertyState } from "@/types";
 
 export function attractionQueueParticipantCount(attraction: Attraction): number {
   return attraction.queue.reduce((sum, e) => sum + e.customerIds.length, 0);
 }
 
 /** Finds the attraction a customer is currently queued at or playing, if any — used to attribute an "order while playing" sale to the right attraction. */
-export function findAttractionForCustomer(state: GameState, customerId: EntityId): Attraction | undefined {
-  return state.attractions.find(
+export function findAttractionForCustomer(prop: OwnedPropertyState, customerId: EntityId): Attraction | undefined {
+  return prop.attractions.find(
     (a) => a.queue.some((e) => e.customerIds.includes(customerId)) || a.activeSession?.participantIds.includes(customerId),
   );
 }
@@ -28,6 +28,7 @@ export function estimateAttractionWaitMinutes(attraction: Attraction, gameDurati
 /** Joins the queue if there's room; returns false (caller should treat as "didn't join") if the queue is already at capacity. */
 export function joinAttractionQueue(
   state: GameState,
+  prop: OwnedPropertyState,
   bus: EventBus,
   attraction: Attraction,
   customerIds: EntityId[],
@@ -38,7 +39,7 @@ export function joinAttractionQueue(
 
   attraction.queue.push({ id: createId("attrqueue"), customerIds, groupId, joinedAtGameMinute: state.gameMinute });
   for (const id of customerIds) {
-    const customer = state.customers.find((c) => c.id === id);
+    const customer = prop.customers.find((c) => c.id === id);
     if (customer) {
       customer.status = "waiting_for_attraction";
       customer.statusEnteredAtGameMinute = state.gameMinute;
@@ -48,7 +49,7 @@ export function joinAttractionQueue(
     state,
     bus,
     "attraction",
-    `${attractionLabel(state, customerIds, groupId)} joined the ${attraction.name} queue.`,
+    `${attractionLabel(prop, customerIds, groupId)} joined the ${attraction.name} queue.`,
     "info",
     attraction.id,
   );
@@ -56,8 +57,8 @@ export function joinAttractionQueue(
 }
 
 /** Removes a customer's party from whichever attraction queue they're in after they've waited too long — they return to their normal visit, not leave the bar. */
-export function abandonAttractionQueue(state: GameState, bus: EventBus, customer: Customer): void {
-  for (const attraction of state.attractions) {
+export function abandonAttractionQueue(state: GameState, prop: OwnedPropertyState, bus: EventBus, customer: Customer): void {
+  for (const attraction of prop.attractions) {
     const index = attraction.queue.findIndex((e) => e.customerIds.includes(customer.id));
     if (index === -1) continue;
 
@@ -73,7 +74,7 @@ export function abandonAttractionQueue(state: GameState, bus: EventBus, customer
     });
 
     for (const id of entry.customerIds) {
-      const member = state.customers.find((c) => c.id === id);
+      const member = prop.customers.find((c) => c.id === id);
       if (!member) continue;
       member.satisfaction = clampRound(member.satisfaction - ATTRACTION_CONFIG.satisfactionLossOnAbandonQueue);
       member.status = "deciding_next_order";
@@ -91,8 +92,8 @@ export function abandonAttractionQueue(state: GameState, bus: EventBus, customer
  * stale customer ID lingers in a queue entry or active session. Called from
  * customerLifecycle.departCustomer.
  */
-export function removeCustomerFromAttractions(state: GameState, bus: EventBus, customerId: EntityId): void {
-  for (const attraction of state.attractions) {
+export function removeCustomerFromAttractions(state: GameState, prop: OwnedPropertyState, bus: EventBus, customerId: EntityId): void {
+  for (const attraction of prop.attractions) {
     const queueIndex = attraction.queue.findIndex((e) => e.customerIds.includes(customerId));
     if (queueIndex !== -1) {
       const entry = attraction.queue[queueIndex];
@@ -108,7 +109,7 @@ export function removeCustomerFromAttractions(state: GameState, bus: EventBus, c
       continue;
     }
     if (attraction.activeSession?.participantIds.includes(customerId)) {
-      interruptAttractionSession(state, bus, attraction);
+      interruptAttractionSession(state, prop, bus, attraction);
     }
   }
 }
@@ -142,8 +143,8 @@ export function selectNextSession(attraction: Attraction, minParticipants: numbe
 }
 
 /** Pulls entries off each idle, usable attraction's queue (via selectNextSession) and starts a session once enough participants are found. */
-export function ensureAttractionQueueProgress(state: GameState, bus: EventBus): void {
-  for (const attraction of state.attractions) {
+export function ensureAttractionQueueProgress(state: GameState, prop: OwnedPropertyState, bus: EventBus): void {
+  for (const attraction of prop.attractions) {
     if (attraction.activeSession || !isAttractionUsable(attraction) || attraction.queue.length === 0) continue;
     const catalogEntry = getAttractionCatalogEntryForCategory(attraction.category);
 
@@ -165,6 +166,6 @@ export function ensureAttractionQueueProgress(state: GameState, bus: EventBus): 
 
     const customerIds = taken.flatMap((e) => e.customerIds);
     const primaryGroupId = taken.length === 1 ? taken[0].groupId : null;
-    startAttractionSession(state, bus, attraction, customerIds, primaryGroupId);
+    startAttractionSession(state, prop, bus, attraction, customerIds, primaryGroupId);
   }
 }

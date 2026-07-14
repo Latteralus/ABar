@@ -4,6 +4,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { formatCents } from "@/utils/money";
 import { ADVERTISING_CATALOG } from "@/data/advertising/advertisingCatalog";
 import { computePromotionStats, type PromotionStats } from "@/simulation/engine/advertising";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { PromotionCatalogEntry } from "@/types";
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -20,8 +21,9 @@ export function AdvertisingScreen() {
   const state = useGameStore((s) => s.state);
   const purchasePromotion = useGameStore((s) => s.purchasePromotion);
   if (!state) return null;
+  const prop = activeProperty(state);
 
-  const stats = computePromotionStats(state);
+  const stats = computePromotionStats(state, prop);
 
   const catalogColumns: DataTableColumn<PromotionCatalogEntry>[] = [
     { key: "name", header: "Name", render: (e) => e.name },
@@ -34,7 +36,7 @@ export function AdvertisingScreen() {
       key: "launch",
       header: "",
       render: (e) => {
-        const alreadyActive = state.activePromotions.some((p) => p.catalogId === e.id);
+        const alreadyActive = prop.activePromotions.some((p) => p.catalogId === e.id);
         return (
           <button
             className="btn btn-primary"

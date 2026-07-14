@@ -7,6 +7,7 @@ import { formatQuantity } from "@/utils/format";
 import { GAME_TIME_CONFIG } from "@/config/gameConfig";
 import { getProperty } from "@/data/properties";
 import { getStorageUsage, type StorageUsage } from "@/simulation/engine/spoilage";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { InventoryItem } from "@/types";
 
 const POOL_LABEL: Record<keyof StorageUsage, string> = {
@@ -35,10 +36,11 @@ export function InventoryScreen() {
   const state = useGameStore((s) => s.state);
   if (!state) return null;
 
-  const property = getProperty(state.propertyId);
-  const usage = getStorageUsage(state, property);
-  const foodItems = state.inventory.filter((item) => item.category === "food");
-  const drinkItems = state.inventory.filter((item) => item.category !== "food");
+  const prop = activeProperty(state);
+  const property = getProperty(prop.propertyId);
+  const usage = getStorageUsage(prop, property);
+  const foodItems = prop.inventory.filter((item) => item.category === "food");
+  const drinkItems = prop.inventory.filter((item) => item.category !== "food");
 
   return (
     <div>

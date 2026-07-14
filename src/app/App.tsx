@@ -10,6 +10,7 @@ import { MenuPricingScreen } from "@/features/menu/MenuPricingScreen";
 import { PurchasingScreen } from "@/features/purchasing/PurchasingScreen";
 import { EquipmentScreen } from "@/features/equipment/EquipmentScreen";
 import { AttractionsScreen } from "@/features/attractions/AttractionsScreen";
+import { RealEstateScreen } from "@/features/realEstate/RealEstateScreen";
 import { FinancialsScreen } from "@/features/financials/FinancialsScreen";
 import { ReportsScreen } from "@/features/reports/ReportsScreen";
 import { ReputationScreen } from "@/features/reputation/ReputationScreen";
@@ -35,6 +36,7 @@ export function App() {
         <Route path="/purchasing" element={<PurchasingScreen />} />
         <Route path="/equipment" element={<EquipmentScreen />} />
         <Route path="/attractions" element={<AttractionsScreen />} />
+        <Route path="/real-estate" element={<RealEstateScreen />} />
         <Route path="/financials" element={<FinancialsScreen />} />
         <Route path="/reports" element={<ReportsScreen />} />
         <Route path="/reputation" element={<ReputationScreen />} />

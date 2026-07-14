@@ -1,5 +1,5 @@
 import { isEquipmentUsable } from "./equipmentMaintenance";
-import type { GameState } from "@/types";
+import type { OwnedPropertyState } from "@/types";
 
 /**
  * glass_washer/dishwasher reduce how much mess each drink/food delivery leaves behind (see
@@ -8,10 +8,10 @@ import type { GameState } from "@/types";
  * than "give existing equipment a real effect." Reusing the existing bar-cleanliness system keeps
  * this additive. Both are binary gates, same shape as tvEffects.hasOperationalTv.
  */
-export function hasOperationalGlassWasher(state: GameState): boolean {
-  return state.equipment.some((e) => e.category === "glass_washer" && isEquipmentUsable(e));
+export function hasOperationalGlassWasher(prop: OwnedPropertyState): boolean {
+  return prop.equipment.some((e) => e.category === "glass_washer" && isEquipmentUsable(e));
 }
 
-export function hasOperationalDishwasher(state: GameState): boolean {
-  return state.equipment.some((e) => e.category === "dishwasher" && isEquipmentUsable(e));
+export function hasOperationalDishwasher(prop: OwnedPropertyState): boolean {
+  return prop.equipment.some((e) => e.category === "dishwasher" && isEquipmentUsable(e));
 }

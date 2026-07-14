@@ -4,6 +4,7 @@ import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { closeTabAndPay } from "@/simulation/engine/payments";
 import { ECONOMY_CONFIG } from "@/config/economyConfig";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Customer, Employee } from "@/types";
 
 function makeEmployee(id: string): Employee {
@@ -64,8 +65,9 @@ function makeCustomer(): Customer {
 describe("tip distribution", () => {
   it("splits the 75% employee share evenly across every currently-employed staff member", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(makeEmployee("a"), makeEmployee("b"), makeEmployee("c"));
-    state.tabs.push({
+    const prop = activeProperty(state);
+    prop.employees.push(makeEmployee("a"), makeEmployee("b"), makeEmployee("c"));
+    prop.tabs.push({
       id: "tab-1",
       tabNumber: 1,
       customerId: "cust-1",
@@ -86,24 +88,25 @@ describe("tip distribution", () => {
 
     const bus = new EventBus();
     const rng = new SeededRandom(7);
-    const [payingEmployee] = state.employees;
-    closeTabAndPay(state, rng, bus, makeCustomer(), payingEmployee);
+    const [payingEmployee] = prop.employees;
+    closeTabAndPay(state, prop, rng, bus, makeCustomer(), payingEmployee);
 
-    const tab = state.tabs[0];
+    const tab = prop.tabs[0];
     const expectedBarShare = Math.round(tab.tip * ECONOMY_CONFIG.tips.barSharePercent);
     const expectedEmployeeShare = tab.tip - expectedBarShare;
 
-    const totalDistributed = state.employees.reduce((sum, e) => sum + e.performance.tipsEarnedCents, 0);
+    const totalDistributed = prop.employees.reduce((sum, e) => sum + e.performance.tipsEarnedCents, 0);
     expect(totalDistributed).toBe(expectedEmployeeShare);
 
     // No single employee should get dramatically more than an even share (within a rounding cent).
-    const shares = state.employees.map((e) => e.performance.tipsEarnedCents);
+    const shares = prop.employees.map((e) => e.performance.tipsEarnedCents);
     expect(Math.max(...shares) - Math.min(...shares)).toBeLessThanOrEqual(1);
   });
 
   it("does not blow up when there are no employees to split tips among", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.tabs.push({
+    const prop = activeProperty(state);
+    prop.tabs.push({
       id: "tab-1",
       tabNumber: 1,
       customerId: "cust-1",
@@ -124,6 +127,6 @@ describe("tip distribution", () => {
 
     const bus = new EventBus();
     const rng = new SeededRandom(3);
-    expect(() => closeTabAndPay(state, rng, bus, makeCustomer(), null)).not.toThrow();
+    expect(() => closeTabAndPay(state, prop, rng, bus, makeCustomer(), null)).not.toThrow();
   });
 });

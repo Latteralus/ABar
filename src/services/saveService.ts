@@ -7,7 +7,7 @@ import { STARTER_PROPERTY } from "@/data/properties";
 import { getInventoryCatalogEntry } from "@/data/products/inventoryCatalog";
 import { CUSTOMER_ARCHETYPES } from "@/data/customers/archetypes";
 import { storageService } from "./storageService";
-import type { GameState, SaveFileEnvelope, SaveSummary } from "@/types";
+import type { Bill, GameState, OwnedPropertyState, SaveFileEnvelope, SaveSummary } from "@/types";
 import { CURRENT_SAVE_VERSION } from "@/types/save";
 
 function saveKey(saveId: string): string {
@@ -42,9 +42,12 @@ function toSummary(state: GameState): SaveSummary {
 /**
  * Applies sequential migrations from a save's stored version up to CURRENT_SAVE_VERSION, so
  * existing saves keep loading after a schema change instead of crashing on a missing field
- * (Master Plan Section 42/50 "save migration").
+ * (Master Plan Section 42/50 "save migration"). Every branch before v10 mutates the pre-Real-Estate
+ * flat shape, so `state` stays loosely typed here rather than as `GameState` — the v10 branch is
+ * what actually reshapes it into the current, strictly-typed `GameState`.
  */
-function migrate(envelope: SaveFileEnvelope): GameState {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- migrating arbitrary older save shapes into the current one
+function migrate(envelope: { version: number; state: any }): GameState {
   const state = envelope.state;
 
   if (envelope.version < 2) {
@@ -137,7 +140,65 @@ function migrate(envelope: SaveFileEnvelope): GameState {
     if (!Array.isArray(state.activePromotions)) state.activePromotions = [];
   }
 
-  return state;
+  if (envelope.version < 10) {
+    // v10 (Real Estate/Neighborhoods) moved every location-specific field off the top-level state
+    // and into a per-property bundle, since a player can now own/operate several properties at
+    // once. A pre-v10 save only ever had one property, so it wraps into a single OwnedPropertyState
+    // and becomes the sole (and active) entry in the new `properties` array. The startup loan is
+    // the only bill kind that stays company-wide; every other bill kind moves onto the property.
+    const oldBills: Bill[] = Array.isArray(state.bills) ? state.bills : [];
+    const wrappedProperty: OwnedPropertyState = {
+      propertyId: state.propertyId,
+      acquisitionType: state.property?.acquisitionType ?? "lease",
+      acquiredAtGameMinute: state.property?.acquiredAtGameMinute ?? 0,
+      acquiredAtGameDay: 1,
+      lastActiveGameDay: state.gameDay,
+      employees: state.employees ?? [],
+      customers: state.customers ?? [],
+      customerGroups: state.customerGroups ?? [],
+      inventory: state.inventory ?? [],
+      purchaseOrders: state.purchaseOrders ?? [],
+      equipment: state.equipment ?? [],
+      attractions: state.attractions ?? [],
+      menu: state.menu ?? [],
+      barCleanliness: state.barCleanliness ?? 100,
+      tabs: state.tabs ?? [],
+      receipts: state.receipts ?? [],
+      tasks: state.tasks ?? [],
+      orders: state.orders ?? [],
+      reputation: state.reputation ?? { score: REPUTATION_CONFIG.startingScore, history: [] },
+      reviews: state.reviews ?? [],
+      activePromotions: state.activePromotions ?? [],
+      dailyReports: state.dailyReports ?? [],
+      bills: oldBills.filter((b) => b.kind !== "loan"),
+    };
+
+    state.properties = [wrappedProperty];
+    state.activePropertyId = wrappedProperty.propertyId;
+    state.bills = oldBills.filter((b) => b.kind === "loan");
+
+    delete state.property;
+    delete state.propertyId;
+    delete state.employees;
+    delete state.customers;
+    delete state.customerGroups;
+    delete state.inventory;
+    delete state.purchaseOrders;
+    delete state.equipment;
+    delete state.attractions;
+    delete state.menu;
+    delete state.barCleanliness;
+    delete state.tabs;
+    delete state.receipts;
+    delete state.tasks;
+    delete state.orders;
+    delete state.reputation;
+    delete state.reviews;
+    delete state.activePromotions;
+    delete state.dailyReports;
+  }
+
+  return state as GameState;
 }
 
 export const saveService = {
@@ -152,8 +213,8 @@ export const saveService = {
   load(saveId: string): GameState | null {
     const raw = storageService.getItem(saveKey(saveId));
     if (!raw) return null;
-    const envelope = JSON.parse(raw) as SaveFileEnvelope;
-    return migrate(envelope);
+    const envelope = JSON.parse(raw) as { version: number; state: unknown };
+    return migrate(envelope as { version: number; state: any }); // eslint-disable-line @typescript-eslint/no-explicit-any
   },
 
   list(): SaveSummary[] {

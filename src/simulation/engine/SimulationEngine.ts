@@ -4,6 +4,7 @@ import { SimulationClock } from "@/simulation/clock/SimulationClock";
 import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import type { GameState } from "@/types";
+import { activeProperty } from "./activeProperty";
 import { processArrivals } from "./customerArrivals";
 import { advanceCustomers } from "./customerLifecycle";
 import { advanceEmployees } from "./employeeAI";
@@ -111,23 +112,24 @@ export class SimulationEngine {
   private advanceOneMinute(): void {
     const state = this.state;
     state.gameMinute += 1;
+    const prop = activeProperty(state);
 
-    processArrivals(state, this.rng, this.bus);
-    advanceCustomers(state, this.rng, this.bus);
-    processAttractionDecisions(state, this.rng, this.bus);
-    ensureAttractionQueueProgress(state, this.bus);
-    advanceAttractionSessions(state, this.bus);
-    ensureAttractionTasks(state, this.bus);
-    processAttractionWear(state, this.rng, this.bus);
-    ensureOrderTasks(state, this.rng, this.bus);
-    ensureSeatingTasks(state);
-    ensureCleaningTasks(state);
-    ensureMaintenanceTasks(state, this.bus);
-    processEquipmentWear(state, this.rng, this.bus);
-    processJukeboxSongs(state, this.rng, this.bus);
-    processIntoxicatedCustomers(state, this.rng, this.bus);
-    advanceEmployees(state, this.rng, this.bus);
-    generateStaffIdleFlavor(state, this.rng, this.bus);
+    processArrivals(state, prop, this.rng, this.bus);
+    advanceCustomers(state, prop, this.rng, this.bus);
+    processAttractionDecisions(state, prop, this.rng, this.bus);
+    ensureAttractionQueueProgress(state, prop, this.bus);
+    advanceAttractionSessions(state, prop, this.bus);
+    ensureAttractionTasks(state, prop, this.bus);
+    processAttractionWear(state, prop, this.rng, this.bus);
+    ensureOrderTasks(state, prop, this.rng, this.bus);
+    ensureSeatingTasks(state, prop);
+    ensureCleaningTasks(state, prop);
+    ensureMaintenanceTasks(state, prop, this.bus);
+    processEquipmentWear(state, prop, this.rng, this.bus);
+    processJukeboxSongs(state, prop, this.rng, this.bus);
+    processIntoxicatedCustomers(state, prop, this.rng, this.bus);
+    advanceEmployees(state, prop, this.rng, this.bus);
+    generateStaffIdleFlavor(state, prop, this.rng, this.bus);
 
     state.rngState = this.rng.getState();
 

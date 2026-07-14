@@ -6,6 +6,7 @@ import { getInventoryCatalogEntry } from "@/data/products/inventoryCatalog";
 import { getProduct, PRODUCT_CATALOG } from "@/data/products/products";
 import { ALCOHOLIC_PRODUCT_IDS, getRecipeForProduct, RECIPE_CATALOG } from "@/data/recipes/recipes";
 import { hasRequiredEquipment } from "@/simulation/engine/orderProcessing";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 
 const NEW_DRINK_PRODUCT_IDS = [
   "prod-draft-lager",
@@ -48,11 +49,12 @@ describe("drink catalog", () => {
 
   it("gates Draft Lager behind an owned draft_system, unlike bar_station drinks", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    expect(hasRequiredEquipment(state, "prod-draft-lager")).toBe(false);
-    expect(hasRequiredEquipment(state, "prod-margarita")).toBe(true); // starter bar_station already covers this
+    const prop = activeProperty(state);
+    expect(hasRequiredEquipment(prop, "prod-draft-lager")).toBe(false);
+    expect(hasRequiredEquipment(prop, "prod-margarita")).toBe(true); // starter bar_station already covers this
 
     commandService.purchaseEquipment(state, new EventBus(), "equip-two-tap-draft");
-    expect(hasRequiredEquipment(state, "prod-draft-lager")).toBe(true);
+    expect(hasRequiredEquipment(prop, "prod-draft-lager")).toBe(true);
   });
 
   it("a keg-unit inventory item is consumed in small fractional pours", () => {

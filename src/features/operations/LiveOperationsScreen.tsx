@@ -7,6 +7,7 @@ import { formatPercent } from "@/utils/format";
 import { getProperty } from "@/data/properties";
 import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import { tabSubtotal } from "@/simulation/engine/payments";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Tab } from "@/types";
 import { CustomerTable } from "./CustomerTable";
 import { EmployeeTable } from "./EmployeeTable";
@@ -17,16 +18,17 @@ import { summarizeDay } from "@/simulation/engine/ledgerSummary";
 export function LiveOperationsScreen() {
   const state = useGameStore((s) => s.state);
   if (!state) return null;
+  const prop = activeProperty(state);
 
-  const property = getProperty(state.propertyId);
-  const seating = effectiveSeatingCapacity(state, property);
-  const activeCustomers = state.customers.filter((c) => c.status !== "left" && c.status !== "removed");
+  const property = getProperty(prop.propertyId);
+  const seating = effectiveSeatingCapacity(prop, property);
+  const activeCustomers = prop.customers.filter((c) => c.status !== "left" && c.status !== "removed");
   const waitingCount = activeCustomers.filter((c) => c.status.startsWith("waiting")).length;
   const seatedCount = activeCustomers.filter((c) => c.seatId !== null).length;
   const standingCapacity = Math.max(0, seating.customerCapacity - seating.seatingCapacity);
   const unseatedCount = activeCustomers.filter((c) => c.seatId === null || c.status === "waiting_for_seat").length;
   const today = summarizeDay(state.ledger, state.gameDay);
-  const openTabs = state.tabs.filter((t) => t.status === "open");
+  const openTabs = prop.tabs.filter((t) => t.status === "open");
 
   const tabColumns: DataTableColumn<Tab>[] = [
     { key: "num", header: "Tab #", render: (t) => `#${t.tabNumber}` },
@@ -54,22 +56,22 @@ export function LiveOperationsScreen() {
           <StatTile label="Open Tabs" value={`${openTabs.length}`} />
           <StatTile
             label="Cleanliness"
-            value={formatPercent(state.barCleanliness)}
-            tone={state.barCleanliness < 40 ? "negative" : state.barCleanliness < 70 ? undefined : "positive"}
+            value={formatPercent(prop.barCleanliness)}
+            tone={prop.barCleanliness < 40 ? "negative" : prop.barCleanliness < 70 ? undefined : "positive"}
           />
         </div>
       </Card>
 
       <Card title="Floor">
-        <FloorView state={state} property={property} />
+        <FloorView prop={prop} gameMinute={state.gameMinute} property={property} />
       </Card>
 
       <Card title="Customers">
-        <CustomerTable customers={activeCustomers} gameMinute={state.gameMinute} tabs={state.tabs} />
+        <CustomerTable customers={activeCustomers} gameMinute={state.gameMinute} tabs={prop.tabs} />
       </Card>
 
       <Card title="Employees">
-        <EmployeeTable state={state} />
+        <EmployeeTable prop={prop} />
       </Card>
 
       <Card title="Open Tabs">

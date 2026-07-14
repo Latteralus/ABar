@@ -3,6 +3,7 @@ import { createNewGameState } from "@/services/newGameService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { generateStaffIdleFlavor } from "@/simulation/engine/staffIdleFlavor";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Employee } from "@/types";
 
 function makeEmployee(role: Employee["role"], overrides: Partial<Employee> = {}): Employee {
@@ -39,40 +40,44 @@ const neverChance = { chance: () => false, pick: <T>(arr: readonly T[]) => arr[0
 describe("generateStaffIdleFlavor", () => {
   it("logs a flavor line for an idle bartender", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(makeEmployee("bartender"));
+    const prop = activeProperty(state);
+    prop.employees.push(makeEmployee("bartender"));
     const bus = new EventBus();
 
-    generateStaffIdleFlavor(state, alwaysChance, bus);
+    generateStaffIdleFlavor(state, prop, alwaysChance, bus);
 
     expect(state.activityLog.some((e) => e.category === "employee")).toBe(true);
   });
 
   it("does nothing for an employee currently on a task", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(makeEmployee("bartender", { status: "preparing_drink", currentTaskId: "task-1" }));
+    const prop = activeProperty(state);
+    prop.employees.push(makeEmployee("bartender", { status: "preparing_drink", currentTaskId: "task-1" }));
     const bus = new EventBus();
 
-    generateStaffIdleFlavor(state, alwaysChance, bus);
+    generateStaffIdleFlavor(state, prop, alwaysChance, bus);
 
     expect(state.activityLog.some((e) => e.category === "employee")).toBe(false);
   });
 
   it("does nothing for a role with no idle-flavor templates (e.g. security)", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(makeEmployee("security"));
+    const prop = activeProperty(state);
+    prop.employees.push(makeEmployee("security"));
     const bus = new EventBus();
 
-    generateStaffIdleFlavor(state, alwaysChance, bus);
+    generateStaffIdleFlavor(state, prop, alwaysChance, bus);
 
     expect(state.activityLog.some((e) => e.category === "employee")).toBe(false);
   });
 
   it("respects the roll and stays silent when chance doesn't favor it", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(makeEmployee("server"));
+    const prop = activeProperty(state);
+    prop.employees.push(makeEmployee("server"));
     const bus = new EventBus();
 
-    generateStaffIdleFlavor(state, neverChance, bus);
+    generateStaffIdleFlavor(state, prop, neverChance, bus);
 
     expect(state.activityLog.some((e) => e.category === "employee")).toBe(false);
   });

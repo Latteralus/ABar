@@ -13,6 +13,7 @@ import {
 } from "@/data/equipment/equipmentCatalog";
 import { getProperty } from "@/data/properties";
 import { activeTaskForEquipment, progressPercent } from "@/utils/taskProgress";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Equipment, EquipmentStatus } from "@/types";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -53,8 +54,9 @@ export function EquipmentScreen() {
   const requestContractRepair = useGameStore((s) => s.requestContractRepair);
 
   if (!state) return null;
-  const property = getProperty(state.propertyId);
-  const equipmentSpaceUsed = usedEquipmentSpace(state);
+  const prop = activeProperty(state);
+  const property = getProperty(prop.propertyId);
+  const equipmentSpaceUsed = usedEquipmentSpace(prop);
 
   const columns: DataTableColumn<Equipment>[] = [
     { key: "name", header: "Name", render: (e) => e.name },
@@ -75,9 +77,9 @@ export function EquipmentScreen() {
       header: "Repair Progress",
       render: (e) => {
         if (e.currentStatus !== "under_repair") return "—";
-        const task = activeTaskForEquipment(state, e.id);
+        const task = activeTaskForEquipment(prop, e.id);
         if (!task || !task.assignedEmployeeId) return "—";
-        const employee = state.employees.find((emp) => emp.id === task.assignedEmployeeId);
+        const employee = prop.employees.find((emp) => emp.id === task.assignedEmployeeId);
         return `${employee ? `${employee.firstName} ${employee.lastName}` : "Unknown"} — ${progressPercent(task)}%`;
       },
     },
@@ -105,7 +107,7 @@ export function EquipmentScreen() {
           Equipment space used: {equipmentSpaceUsed} / {property.equipmentFloorSpaceUnits}. Higher-tier items are upgrades over lower-tier
           owned units in the same category; they still occupy physical space.
         </p>
-        <DataTable columns={columns} rows={state.equipment} rowKey={(e) => e.id} emptyLabel="No equipment owned yet." />
+        <DataTable columns={columns} rows={prop.equipment} rowKey={(e) => e.id} emptyLabel="No equipment owned yet." />
       </Card>
 
       <Card title="Purchase Equipment">
@@ -135,7 +137,7 @@ export function EquipmentScreen() {
                   {entry.spaceUnits} ({equipmentSpaceUsed + entry.spaceUnits}/{property.equipmentFloorSpaceUnits})
                 </td>
                 <td>
-                  {isUpgradeForOwnedEquipment(state, entry) ? (
+                  {isUpgradeForOwnedEquipment(prop, entry) ? (
                     <Badge variant="positive">Upgrade</Badge>
                   ) : (
                     <Badge variant="neutral">New</Badge>
@@ -146,9 +148,9 @@ export function EquipmentScreen() {
                   <button
                     className="btn btn-primary"
                     onClick={() => purchaseEquipment(entry.id)}
-                    disabled={state.cash < entry.purchasePrice || wouldExceedEquipmentSpace(state, property, entry)}
+                    disabled={state.cash < entry.purchasePrice || wouldExceedEquipmentSpace(prop, property, entry)}
                     title={
-                      wouldExceedEquipmentSpace(state, property, entry) ? "Not enough equipment floor space in this property." : undefined
+                      wouldExceedEquipmentSpace(prop, property, entry) ? "Not enough equipment floor space in this property." : undefined
                     }
                   >
                     Purchase

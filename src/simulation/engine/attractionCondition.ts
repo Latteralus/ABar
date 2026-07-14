@@ -2,7 +2,7 @@ import { ATTRACTION_CONFIG } from "@/config/attractionConfig";
 import { getAttractionCatalogEntryForCategory } from "@/data/attractions/attractionCatalog";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { Attraction, GameState } from "@/types";
+import type { Attraction, GameState, OwnedPropertyState } from "@/types";
 import { logActivity } from "./activityLogger";
 
 /** Only operational/degraded attractions are usable — mirrors equipmentMaintenance.ts's isEquipmentUsable, kept as an independent function/type per the instruction not to reuse Equipment. */
@@ -17,8 +17,8 @@ export function decayAttractionOnUse(attraction: Attraction): void {
 }
 
 /** Flat time-based wear for every owned attraction once per operating day, same shape as applyDailyEquipmentWear. */
-export function applyDailyAttractionWear(state: GameState, bus: EventBus): void {
-  for (const attraction of state.attractions) {
+export function applyDailyAttractionWear(state: GameState, prop: OwnedPropertyState, bus: EventBus): void {
+  for (const attraction of prop.attractions) {
     if (!isAttractionUsable(attraction)) continue;
     const wasOperational = attraction.currentStatus === "operational";
     attraction.condition = Math.max(0, attraction.condition - ATTRACTION_CONFIG.dailyConditionDecay);
@@ -52,8 +52,8 @@ export function applyDailyAttractionWear(state: GameState, bus: EventBus): void 
 }
 
 /** Per-minute chance of a degraded attraction failing outright while the bar is open, same shape as processEquipmentWear. */
-export function processAttractionWear(state: GameState, rng: SeededRandom, bus: EventBus): void {
-  for (const attraction of state.attractions) {
+export function processAttractionWear(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
+  for (const attraction of prop.attractions) {
     if (attraction.currentStatus !== "degraded") continue;
     const severity = (ATTRACTION_CONFIG.degradedConditionThreshold - attraction.condition) / ATTRACTION_CONFIG.degradedConditionThreshold;
     const chance = Math.max(0, severity) * ATTRACTION_CONFIG.maxPerMinuteBreakdownChance;

@@ -4,27 +4,29 @@ import { createId } from "@/services/idService";
 import { minuteOfDayToClockTime } from "@/simulation/clock/gameTime";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { GameState } from "@/types";
+import type { GameState, OwnedPropertyState } from "@/types";
 import { generateCustomer } from "./customerFactory";
 import { logActivity } from "./activityLogger";
 import { reputationDemandMultiplier } from "./reputation";
 import { activePromotionDemandMultiplier } from "./advertising";
+import { neighborhoodDemandMultiplier } from "./neighborhood";
 
-function countActiveCustomers(state: GameState): number {
-  return state.customers.filter((c) => c.status !== "left" && c.status !== "removed").length;
+function countActiveCustomers(prop: OwnedPropertyState): number {
+  return prop.customers.filter((c) => c.status !== "left" && c.status !== "removed").length;
 }
 
 /** Decides whether new customers walk in this minute, respecting property capacity (Master Plan Section 10). */
-export function processArrivals(state: GameState, rng: SeededRandom, bus: EventBus): void {
-  const property = getProperty(state.propertyId);
-  const activeCount = countActiveCustomers(state);
+export function processArrivals(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
+  const property = getProperty(prop.propertyId);
+  const activeCount = countActiveCustomers(prop);
   if (activeCount >= property.customerCapacity) return;
 
   const { hour } = minuteOfDayToClockTime(state.gameMinute);
   const demandMultiplier =
     (CUSTOMER_ARRIVAL_CONFIG.hourlyDemandMultiplier[hour] ?? 0.5) *
-    reputationDemandMultiplier(state) *
-    activePromotionDemandMultiplier(state);
+    reputationDemandMultiplier(prop) *
+    activePromotionDemandMultiplier(state, prop) *
+    neighborhoodDemandMultiplier(property);
   const arrivalChance = CUSTOMER_ARRIVAL_CONFIG.baseArrivalChancePerMinute * demandMultiplier;
 
   if (!rng.chance(arrivalChance)) return;
@@ -38,19 +40,19 @@ export function processArrivals(state: GameState, rng: SeededRandom, bus: EventB
   const memberIds: string[] = [];
 
   for (let i = 0; i < actualSize; i++) {
-    const customer = generateCustomer(rng, state.gameMinute, groupId);
-    state.customers.push(customer);
+    const customer = generateCustomer(rng, state.gameMinute, groupId, property.neighborhood.averageCustomerIncome);
+    prop.customers.push(customer);
     memberIds.push(customer.id);
     bus.emit("customer:arrived", { customer });
   }
 
   if (groupId) {
-    state.customerGroups.push({ id: groupId, memberIds, arrivalGameMinute: state.gameMinute });
+    prop.customerGroups.push({ id: groupId, memberIds, arrivalGameMinute: state.gameMinute });
   }
 
   const label =
     actualSize === 1
-      ? `${state.customers[state.customers.length - 1].firstName} ${state.customers[state.customers.length - 1].lastName}`
+      ? `${prop.customers[prop.customers.length - 1].firstName} ${prop.customers[prop.customers.length - 1].lastName}`
       : `A group of ${actualSize}`;
   logActivity(state, bus, "customer", `${label} entered.`);
 }

@@ -6,17 +6,17 @@ import { collectAttractionFee } from "./attractionRevenue";
 import { decayAttractionOnUse } from "./attractionCondition";
 import { logActivity } from "./activityLogger";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { Attraction, Customer, EntityId, GameState } from "@/types";
+import type { Attraction, Customer, EntityId, GameState, OwnedPropertyState } from "@/types";
 
 /** "The Foster group" for a party of 2+, or "Amy Lewis" for a solo customer — matches the example activity-log style. */
-export function attractionLabel(state: GameState, customerIds: EntityId[], groupId: EntityId | null): string {
-  const first = state.customers.find((c) => c.id === customerIds[0]);
+export function attractionLabel(prop: OwnedPropertyState, customerIds: EntityId[], groupId: EntityId | null): string {
+  const first = prop.customers.find((c) => c.id === customerIds[0]);
   if (!first) return "A customer";
   return groupId ? `The ${first.lastName} group` : `${first.firstName} ${first.lastName}`;
 }
 
-function findParticipants(state: GameState, ids: EntityId[]): Customer[] {
-  return ids.map((id) => state.customers.find((c) => c.id === id)).filter((c): c is Customer => !!c);
+function findParticipants(prop: OwnedPropertyState, ids: EntityId[]): Customer[] {
+  return ids.map((id) => prop.customers.find((c) => c.id === id)).filter((c): c is Customer => !!c);
 }
 
 /** Base wait tolerance in minutes before a queued party abandons — shared by the queue-abandonment check and the satisfaction formula below. Kept as a one-liner rather than a shared helper module to avoid a cross-module import cycle (attractionQueue.ts already depends on this file). */
@@ -44,6 +44,7 @@ function computeGameSatisfactionDelta(customer: Customer, attraction: Attraction
 /** Starts a game: collects the fee, locks participants into `using_attraction`, and logs both the start and the fee collection as separate lines (matches the example log style). */
 export function startAttractionSession(
   state: GameState,
+  prop: OwnedPropertyState,
   bus: EventBus,
   attraction: Attraction,
   customerIds: EntityId[],
@@ -59,22 +60,22 @@ export function startAttractionSession(
   };
   attraction.currentStatus = attraction.currentStatus === "degraded" ? "degraded" : "operational";
 
-  for (const customer of findParticipants(state, customerIds)) {
+  for (const customer of findParticipants(prop, customerIds)) {
     customer.status = "using_attraction";
     customer.statusEnteredAtGameMinute = state.gameMinute;
   }
 
-  const label = attractionLabel(state, customerIds, groupId);
+  const label = attractionLabel(prop, customerIds, groupId);
   logActivity(state, bus, "attraction", `${label} began a game of ${attraction.name.toLowerCase()}.`, "info", attraction.id);
-  collectAttractionFee(state, bus, attraction, attraction.pricePerGameCents);
+  collectAttractionFee(state, prop, bus, attraction, attraction.pricePerGameCents);
 }
 
-function endSession(state: GameState, bus: EventBus, attraction: Attraction, interrupted: boolean): void {
+function endSession(state: GameState, prop: OwnedPropertyState, bus: EventBus, attraction: Attraction, interrupted: boolean): void {
   const session = attraction.activeSession;
   if (!session) return;
 
   let totalSatisfactionDelta = 0;
-  for (const customer of findParticipants(state, session.participantIds)) {
+  for (const customer of findParticipants(prop, session.participantIds)) {
     const waitedMinutes = state.gameMinute - session.startedAtGameMinute;
     const delta = interrupted ? 0 : computeGameSatisfactionDelta(customer, attraction, waitedMinutes);
     customer.satisfaction = clampRound(customer.satisfaction + delta);
@@ -102,17 +103,17 @@ function endSession(state: GameState, bus: EventBus, attraction: Attraction, int
 }
 
 /** Ticks down every attraction's active game by one minute and completes it at zero. */
-export function advanceAttractionSessions(state: GameState, bus: EventBus): void {
-  for (const attraction of state.attractions) {
+export function advanceAttractionSessions(state: GameState, prop: OwnedPropertyState, bus: EventBus): void {
+  for (const attraction of prop.attractions) {
     if (!attraction.activeSession) continue;
     attraction.activeSession.remainingGameMinutes -= 1;
     if (attraction.activeSession.remainingGameMinutes <= 0) {
-      endSession(state, bus, attraction, false);
+      endSession(state, prop, bus, attraction, false);
     }
   }
 }
 
 /** Force-ends a session early (e.g. a participant is swept out at closing time) without applying normal completion satisfaction/wear effects. */
-export function interruptAttractionSession(state: GameState, bus: EventBus, attraction: Attraction): void {
-  endSession(state, bus, attraction, true);
+export function interruptAttractionSession(state: GameState, prop: OwnedPropertyState, bus: EventBus, attraction: Attraction): void {
+  endSession(state, prop, bus, attraction, true);
 }

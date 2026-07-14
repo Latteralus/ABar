@@ -14,7 +14,7 @@ import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import { customerSpentSoFar } from "./payments";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { Customer, CustomerLeaveReason, GameState } from "@/types";
+import type { Customer, CustomerLeaveReason, GameState, OwnedPropertyState } from "@/types";
 import { logActivity } from "./activityLogger";
 
 function setStatus(customer: Customer, status: Customer["status"], atMinute: number): void {
@@ -27,8 +27,8 @@ function waitToleranceMinutes(customer: Customer): number {
 }
 
 /** Cosmetic-only "chatted with..." log line — no mechanical effect beyond the caller's own satisfaction nudge. */
-function logSocialFlavor(state: GameState, bus: EventBus, rng: SeededRandom, customer: Customer): void {
-  const staffCandidates = state.employees.filter((e) => e.role === "bartender" || e.role === "server");
+function logSocialFlavor(state: GameState, prop: OwnedPropertyState, bus: EventBus, rng: SeededRandom, customer: Customer): void {
+  const staffCandidates = prop.employees.filter((e) => e.role === "bartender" || e.role === "server");
   const customerName = `${customer.firstName} ${customer.lastName}`;
 
   if (staffCandidates.length > 0 && rng.chance(0.4)) {
@@ -46,8 +46,15 @@ function logSocialFlavor(state: GameState, bus: EventBus, rng: SeededRandom, cus
   }
 }
 
-export function departCustomer(state: GameState, bus: EventBus, rng: SeededRandom, customer: Customer, reason: CustomerLeaveReason): void {
-  removeCustomerFromAttractions(state, bus, customer.id);
+export function departCustomer(
+  state: GameState,
+  prop: OwnedPropertyState,
+  bus: EventBus,
+  rng: SeededRandom,
+  customer: Customer,
+  reason: CustomerLeaveReason,
+): void {
+  removeCustomerFromAttractions(state, prop, bus, customer.id);
   customer.leaveReason = reason;
   setStatus(customer, "left", state.gameMinute);
   const dissatisfaction: Partial<Record<CustomerLeaveReason, number>> = {
@@ -61,20 +68,20 @@ export function departCustomer(state: GameState, bus: EventBus, rng: SeededRando
     removed_intoxication: 25,
   };
   customer.satisfaction = clampRound(customer.satisfaction - (dissatisfaction[reason] ?? 0));
-  maybeGenerateReview(state, bus, rng, customer);
+  maybeGenerateReview(state, prop, bus, rng, customer);
   bus.emit("customer:left", { customer });
 }
 
 /** Advances every active customer one game-minute: seating, patience timeouts, and consumption pacing. */
-export function advanceCustomers(state: GameState, rng: SeededRandom, bus: EventBus): void {
-  const property = getProperty(state.propertyId);
-  const seatedCount = state.customers.filter((c) => c.seatId !== null && c.status !== "left" && c.status !== "removed").length;
-  let availableSeats = effectiveSeatingCapacity(state, property).seatingCapacity - seatedCount;
+export function advanceCustomers(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
+  const property = getProperty(prop.propertyId);
+  const seatedCount = prop.customers.filter((c) => c.seatId !== null && c.status !== "left" && c.status !== "removed").length;
+  let availableSeats = effectiveSeatingCapacity(prop, property).seatingCapacity - seatedCount;
   // With a host on staff, seating goes through a real seat_customer task (see seatingTasks.ts)
   // instead of auto-assigning — that's what gives the host role something to actually do.
-  const hasHost = state.employees.some((e) => e.role === "host");
+  const hasHost = prop.employees.some((e) => e.role === "host");
 
-  for (const customer of state.customers) {
+  for (const customer of prop.customers) {
     const waitedMinutes = state.gameMinute - customer.statusEnteredAtGameMinute;
 
     switch (customer.status) {
@@ -96,7 +103,7 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
           setStatus(customer, "waiting_to_order", state.gameMinute);
           bus.emit("customer:seated", { customer });
         } else if (waitedMinutes > waitToleranceMinutes(customer)) {
-          departCustomer(state, bus, rng, customer, "no_seating");
+          departCustomer(state, prop, bus, rng, customer, "no_seating");
           logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} left after finding no open seating.`);
         }
         break;
@@ -105,15 +112,15 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
       case "waiting_for_drink":
       case "waiting_for_food": {
         if (waitedMinutes > waitToleranceMinutes(customer)) {
-          departCustomer(state, bus, rng, customer, "wait_too_long");
+          departCustomer(state, prop, bus, rng, customer, "wait_too_long");
           logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} left after waiting too long.`, "warning");
         }
         break;
       }
       case "consuming": {
         // phaseTargetMinutes was rolled when the drink was delivered (employeeAI.handleDeliverItemComplete).
-        const tvOn = hasOperationalTv(state);
-        const jukeboxOn = hasOperationalJukebox(state);
+        const tvOn = hasOperationalTv(prop);
+        const jukeboxOn = hasOperationalJukebox(prop);
         if (tvOn) customer.satisfaction = clampRound(customer.satisfaction + TV_CONFIG.satisfactionBonusPerMinute);
         if (jukeboxOn) customer.satisfaction = clampRound(customer.satisfaction + JUKEBOX_CONFIG.satisfactionBonusPerMinute);
         const target = customer.phaseTargetMinutes ?? CUSTOMER_BEHAVIOR_CONFIG.consumingDurationMinutesRange[0];
@@ -129,10 +136,10 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
         // This is the "hanging out" beat: chatting, people-watching, nursing what's left of the
         // drink — not a tight "decide in the next few minutes" window. See PROJECT_STATUS.md §3.
         if (rng.chance(CUSTOMER_BEHAVIOR_CONFIG.socializingFlavorChancePerMinute)) {
-          logSocialFlavor(state, bus, rng, customer);
+          logSocialFlavor(state, prop, bus, rng, customer);
         }
-        const tvBonus = hasOperationalTv(state) ? TV_CONFIG.satisfactionBonusPerMinute : 0;
-        const jukeboxBonus = hasOperationalJukebox(state) ? JUKEBOX_CONFIG.satisfactionBonusPerMinute : 0;
+        const tvBonus = hasOperationalTv(prop) ? TV_CONFIG.satisfactionBonusPerMinute : 0;
+        const jukeboxBonus = hasOperationalJukebox(prop) ? JUKEBOX_CONFIG.satisfactionBonusPerMinute : 0;
         customer.satisfaction = clampRound(
           customer.satisfaction + CUSTOMER_BEHAVIOR_CONFIG.socializingSatisfactionPerMinute + tvBonus + jukeboxBonus,
         );
@@ -142,7 +149,7 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
 
         // One decision, made once the socializing window is up — not re-rolled every minute.
         const visitMinutes = state.gameMinute - customer.arrivalGameMinute;
-        const canAfford = customerSpentSoFar(state, customer) < customer.spendingBudget;
+        const canAfford = customerSpentSoFar(prop, customer) < customer.spendingBudget;
         const roundsSoFar = customer.itemsOrderedCount;
         const diminishingFactor = Math.max(
           CUSTOMER_BEHAVIOR_CONFIG.reorderDiminishingReturnsFloor,
@@ -160,13 +167,13 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
           // A customer whose only order(s) failed to prepare (stockout) has an open tab with
           // nothing on it — there's nothing to pay for, so send them straight out the door
           // instead of running them through process_payment for a nonsensical $0.00 receipt.
-          const tab = state.tabs.find((t) => t.id === customer.tabId);
+          const tab = prop.tabs.find((t) => t.id === customer.tabId);
           if (!tab || tab.lineItems.length === 0) {
             if (tab) {
               tab.status = "closed";
               tab.closedAtGameMinute = state.gameMinute;
             }
-            departCustomer(state, bus, rng, customer, "item_unavailable");
+            departCustomer(state, prop, bus, rng, customer, "item_unavailable");
             logActivity(
               state,
               bus,
@@ -182,7 +189,7 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
       }
       case "waiting_for_attraction": {
         if (waitedMinutes > attractionWaitToleranceMinutes(customer.patience)) {
-          abandonAttractionQueue(state, bus, customer);
+          abandonAttractionQueue(state, prop, bus, customer);
         }
         break;
       }
@@ -193,7 +200,7 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
       case "leaving": {
         // Tab is already closed — they're just finishing their drink and saying their goodbyes.
         if (waitedMinutes >= CUSTOMER_BEHAVIOR_CONFIG.departureLingerMinutes) {
-          departCustomer(state, bus, rng, customer, customer.leaveReason ?? "satisfied_departure");
+          departCustomer(state, prop, bus, rng, customer, customer.leaveReason ?? "satisfied_departure");
           logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} finished up and left.`);
         }
         break;
@@ -205,19 +212,19 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
 
   // Force everyone still inside toward the door as closing approaches.
   if (state.gameMinute >= 705) {
-    for (const customer of state.customers) {
+    for (const customer of prop.customers) {
       if (customer.status === "left" || customer.status === "removed") continue;
       if (customer.status === "waiting_for_attraction" || customer.status === "using_attraction") {
-        removeCustomerFromAttractions(state, bus, customer.id);
+        removeCustomerFromAttractions(state, prop, bus, customer.id);
       }
       if (customer.status === "leaving") {
-        departCustomer(state, bus, rng, customer, customer.leaveReason ?? "satisfied_departure");
+        departCustomer(state, prop, bus, rng, customer, customer.leaveReason ?? "satisfied_departure");
       } else if (customer.status === "waiting_to_pay") {
         continue;
       } else if (customer.tabId) {
         setStatus(customer, "waiting_to_pay", state.gameMinute);
       } else {
-        departCustomer(state, bus, rng, customer, "closing_time");
+        departCustomer(state, prop, bus, rng, customer, "closing_time");
       }
     }
   }

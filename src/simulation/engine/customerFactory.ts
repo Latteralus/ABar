@@ -3,12 +3,19 @@ import { FIRST_NAMES } from "@/data/names/firstNames";
 import { LAST_NAMES } from "@/data/names/lastNames";
 import { CUSTOMER_BEHAVIOR_CONFIG } from "@/config/customerConfig";
 import { createId } from "@/services/idService";
+import { neighborhoodIncomeBudgetMultiplier, neighborhoodPriceSensitivityDelta } from "./neighborhood";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { Customer, GameMinute } from "@/types";
+import type { Customer, GameMinute, IncomeLevel } from "@/types";
 
-export function generateCustomer(rng: SeededRandom, arrivalMinute: GameMinute, groupId: string | null): Customer {
+export function generateCustomer(rng: SeededRandom, arrivalMinute: GameMinute, groupId: string | null, neighborhoodIncome: IncomeLevel): Customer {
   const archetype = rng.pick(CUSTOMER_ARCHETYPES);
-  const budget = Math.round(CUSTOMER_BEHAVIOR_CONFIG.baseSpendingBudgetCents * archetype.budgetMultiplier * rng.float(0.7, 1.3));
+  const budget = Math.round(
+    CUSTOMER_BEHAVIOR_CONFIG.baseSpendingBudgetCents *
+      archetype.budgetMultiplier *
+      neighborhoodIncomeBudgetMultiplier(neighborhoodIncome) *
+      rng.float(0.7, 1.3),
+  );
+  const priceSensitivity = Math.max(0, Math.min(100, archetype.priceSensitivity + neighborhoodPriceSensitivityDelta(neighborhoodIncome)));
 
   return {
     id: createId("cust"),
@@ -19,7 +26,7 @@ export function generateCustomer(rng: SeededRandom, arrivalMinute: GameMinute, g
     incomeLevel: archetype.incomeLevel,
     spendingBudget: budget,
     preferredCategories: archetype.preferredCategories,
-    priceSensitivity: archetype.priceSensitivity,
+    priceSensitivity,
     patience: archetype.patience,
     reviewTendency: archetype.reviewTendency,
     reorderTendency: archetype.reorderTendency,

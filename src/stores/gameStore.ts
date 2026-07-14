@@ -5,7 +5,7 @@ import { saveService } from "@/services/saveService";
 import { SimulationEngine } from "@/simulation/engine/SimulationEngine";
 import { generateCandidatePool } from "@/simulation/engine/employeeFactory";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { Employee, EmployeeRole, GameState, PurchaseOrderLine, SaveSummary } from "@/types";
+import type { AcquisitionType, Employee, EmployeeRole, GameState, PurchaseOrderLine, SaveSummary } from "@/types";
 import type { CommandResult } from "@/services/commandService";
 
 interface GameStoreState {
@@ -41,6 +41,10 @@ interface GameStoreState {
   setAttractionPrice: (attractionId: string, priceCents: number) => CommandResult;
   requestAttractionContractRepair: (attractionId: string) => CommandResult;
   purchasePromotion: (catalogId: string) => CommandResult;
+
+  switchActiveProperty: (targetPropertyId: string) => CommandResult;
+  leaseOrBuyProperty: (catalogPropertyId: string, acquisitionType: AcquisitionType) => CommandResult;
+  endLeaseOrSellProperty: (propertyId: string) => CommandResult;
 }
 
 /**
@@ -180,4 +184,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     commandService.requestAttractionContractRepair(state, bus, attractionId),
   ),
   purchasePromotion: runCommand(get, (state, bus, catalogId: string) => commandService.purchasePromotion(state, bus, catalogId)),
+
+  switchActiveProperty: runCommand(get, (state, bus, targetPropertyId: string) =>
+    commandService.switchActiveProperty(state, bus, targetPropertyId),
+  ),
+  leaseOrBuyProperty: runCommand(get, (state, bus, catalogPropertyId: string, acquisitionType: AcquisitionType) =>
+    commandService.leaseOrBuyProperty(state, bus, catalogPropertyId, acquisitionType),
+  ),
+  endLeaseOrSellProperty: runCommand(get, (state, bus, propertyId: string) =>
+    commandService.endLeaseOrSellProperty(state, bus, propertyId),
+  ),
 }));

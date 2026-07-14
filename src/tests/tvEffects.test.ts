@@ -5,6 +5,7 @@ import { EventBus } from "@/simulation/events/EventBus";
 import { hasOperationalTv, shouldOrderWhileWatchingTv } from "@/simulation/engine/tvEffects";
 import { advanceCustomers } from "@/simulation/engine/customerLifecycle";
 import { describeEquipmentBenefit } from "@/data/equipment/equipmentCatalog";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
 import type { Customer } from "@/types";
 
@@ -41,20 +42,21 @@ function customer(overrides: Partial<Customer> = {}): Customer {
 describe("tvEffects", () => {
   it("hasOperationalTv is true only for an operational/degraded owned TV", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    expect(hasOperationalTv(state)).toBe(false);
+    const prop = activeProperty(state);
+    expect(hasOperationalTv(prop)).toBe(false);
 
     commandService.purchaseEquipment(state, new EventBus(), "equip-flat-screen-tv");
-    expect(hasOperationalTv(state)).toBe(true);
+    expect(hasOperationalTv(prop)).toBe(true);
 
-    const tv = state.equipment.find((e) => e.category === "tv")!;
+    const tv = prop.equipment.find((e) => e.category === "tv")!;
     tv.currentStatus = "degraded";
-    expect(hasOperationalTv(state)).toBe(true);
+    expect(hasOperationalTv(prop)).toBe(true);
 
     tv.currentStatus = "failed";
-    expect(hasOperationalTv(state)).toBe(false);
+    expect(hasOperationalTv(prop)).toBe(false);
 
     tv.currentStatus = "awaiting_repair";
-    expect(hasOperationalTv(state)).toBe(false);
+    expect(hasOperationalTv(prop)).toBe(false);
   });
 
   it("shouldOrderWhileWatchingTv respects the seeded RNG chance roll", () => {
@@ -68,17 +70,19 @@ describe("tvEffects", () => {
     const rng = { int: () => 10, chance: () => false } as unknown as SeededRandom;
 
     const withoutTv = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    withoutTv.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
+    const withoutTvProp = activeProperty(withoutTv);
+    withoutTvProp.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
     withoutTv.gameMinute = 1;
-    advanceCustomers(withoutTv, rng, new EventBus());
-    const targetWithoutTv = withoutTv.customers[0].phaseTargetMinutes;
+    advanceCustomers(withoutTv, withoutTvProp, rng, new EventBus());
+    const targetWithoutTv = withoutTvProp.customers[0].phaseTargetMinutes;
 
     const withTv = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const withTvProp = activeProperty(withTv);
     commandService.purchaseEquipment(withTv, new EventBus(), "equip-flat-screen-tv");
-    withTv.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
+    withTvProp.customers.push(customer({ statusEnteredAtGameMinute: 0, phaseTargetMinutes: 0 }));
     withTv.gameMinute = 1;
-    advanceCustomers(withTv, rng, new EventBus());
-    const targetWithTv = withTv.customers[0].phaseTargetMinutes;
+    advanceCustomers(withTv, withTvProp, rng, new EventBus());
+    const targetWithTv = withTvProp.customers[0].phaseTargetMinutes;
 
     expect(targetWithTv).toBeGreaterThan(targetWithoutTv!);
   });

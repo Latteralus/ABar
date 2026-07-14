@@ -1,7 +1,7 @@
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { activeTaskForEmployee, describeTask } from "@/utils/taskProgress";
-import type { Employee, GameState } from "@/types";
+import type { Employee, OwnedPropertyState } from "@/types";
 
 const STATUS_LABEL: Record<Employee["status"], string> = {
   idle: "Idle",
@@ -18,7 +18,7 @@ const STATUS_LABEL: Record<Employee["status"], string> = {
   off_duty: "Off Duty",
 };
 
-export function EmployeeTable({ state }: { state: GameState }) {
+export function EmployeeTable({ prop }: { prop: OwnedPropertyState }) {
   const columns: DataTableColumn<Employee>[] = [
     { key: "name", header: "Name", render: (e) => `${e.firstName} ${e.lastName}` },
     { key: "role", header: "Role", render: (e) => e.role },
@@ -31,8 +31,8 @@ export function EmployeeTable({ state }: { state: GameState }) {
       key: "task",
       header: "Current Task",
       render: (e) => {
-        const task = activeTaskForEmployee(state, e.id);
-        return task ? describeTask(state, task) : "—";
+        const task = activeTaskForEmployee(prop, e.id);
+        return task ? describeTask(prop, task) : "—";
       },
     },
     { key: "personality", header: "Personality", render: (e) => e.personality.map((t) => t.replace("_", " ")).join(", ") || "—" },
@@ -43,5 +43,5 @@ export function EmployeeTable({ state }: { state: GameState }) {
     { key: "tips", header: "Tips", render: (e) => `$${(e.performance.tipsEarnedCents / 100).toFixed(2)}` },
   ];
 
-  return <DataTable columns={columns} rows={state.employees} rowKey={(e) => e.id} emptyLabel="No employees hired yet." />;
+  return <DataTable columns={columns} rows={prop.employees} rowKey={(e) => e.id} emptyLabel="No employees hired yet." />;
 }

@@ -7,6 +7,7 @@ import { formatCents } from "@/utils/money";
 import { formatQuantity } from "@/utils/format";
 import { getProperty } from "@/data/properties";
 import { getStorageUsage, POOL_BY_STORAGE_LOCATION, type StorageUsage } from "@/simulation/engine/spoilage";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { InventoryItem, PurchaseOrder, PurchaseOrderLine } from "@/types";
 
 interface SupplyOrderTableProps {
@@ -77,25 +78,27 @@ export function PurchasingScreen() {
   const [payment, setPayment] = useState<"cash" | "tab">("cash");
   const [error, setError] = useState<string | null>(null);
 
+  const prop = state ? activeProperty(state) : null;
+
   const totalCost = useMemo(() => {
-    if (!state) return 0;
-    return state.inventory.reduce((sum, item) => sum + (quantities[item.id] ?? 0) * item.averageUnitCost, 0);
-  }, [state, quantities]);
+    if (!prop) return 0;
+    return prop.inventory.reduce((sum, item) => sum + (quantities[item.id] ?? 0) * item.averageUnitCost, 0);
+  }, [prop, quantities]);
 
   // Room left is based on current on-hand stock only — it doesn't account for other lines in
   // this same draft order also claiming space in the same pool, so it's a helpful ceiling, not
   // an exact guarantee once you're buying several pool-mates in one order.
-  const usage = useMemo(() => (state ? getStorageUsage(state, getProperty(state.propertyId)) : null), [state]);
+  const usage = useMemo(() => (prop ? getStorageUsage(prop, getProperty(prop.propertyId)) : null), [prop]);
 
   const setQuantity = (itemId: string, value: number) => setQuantities((q) => ({ ...q, [itemId]: Math.max(0, Math.round(value)) }));
 
-  if (!state || !usage) return null;
+  if (!state || !prop || !usage) return null;
 
-  const foodItems = state.inventory.filter((item) => item.category === "food");
-  const drinkItems = state.inventory.filter((item) => item.category !== "food");
+  const foodItems = prop.inventory.filter((item) => item.category === "food");
+  const drinkItems = prop.inventory.filter((item) => item.category !== "food");
 
   const submit = () => {
-    const lines: PurchaseOrderLine[] = state.inventory
+    const lines: PurchaseOrderLine[] = prop.inventory
       .filter((item) => (quantities[item.id] ?? 0) > 0)
       .map((item) => ({ inventoryItemId: item.id, quantity: quantities[item.id], unitCost: item.averageUnitCost }));
     const result = placePurchaseOrder(lines, payment);
@@ -161,7 +164,7 @@ export function PurchasingScreen() {
       <Card title="Purchase Orders">
         <DataTable
           columns={orderColumns}
-          rows={[...state.purchaseOrders].reverse()}
+          rows={[...prop.purchaseOrders].reverse()}
           rowKey={(po) => po.id}
           emptyLabel="No orders placed yet."
         />

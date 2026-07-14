@@ -3,6 +3,7 @@ import { createNewGameState } from "@/services/newGameService";
 import { commandService } from "@/services/commandService";
 import { ensureMenuAutoActivation } from "@/simulation/engine/menuAutomation";
 import { EventBus } from "@/simulation/events/EventBus";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Employee } from "@/types";
 
 function bartender(): Employee {
@@ -35,43 +36,47 @@ function bartender(): Employee {
 describe("menuAutomation", () => {
   it("does not activate a listing missing staff or supply", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    ensureMenuAutoActivation(state, new EventBus());
-    const listing = state.menu.find((m) => m.productId === "prod-bottled-lager")!;
+    const prop = activeProperty(state);
+    ensureMenuAutoActivation(state, prop, new EventBus());
+    const listing = prop.menu.find((m) => m.productId === "prod-bottled-lager")!;
     expect(listing.isActive).toBe(false);
   });
 
   it("auto-activates a listing once equipment (already owned), staff, and supply are all satisfied", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(bartender());
-    const lager = state.inventory.find((i) => i.id === "inv-bottled-lager")!;
+    const prop = activeProperty(state);
+    prop.employees.push(bartender());
+    const lager = prop.inventory.find((i) => i.id === "inv-bottled-lager")!;
     lager.quantityOnHand = 50;
 
-    ensureMenuAutoActivation(state, new EventBus());
+    ensureMenuAutoActivation(state, prop, new EventBus());
 
-    const listing = state.menu.find((m) => m.productId === "prod-bottled-lager")!;
+    const listing = prop.menu.find((m) => m.productId === "prod-bottled-lager")!;
     expect(listing.isActive).toBe(true);
   });
 
   it("never re-activates a listing the player explicitly turned off, even if capability is satisfied afterward", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.employees.push(bartender());
-    state.inventory.find((i) => i.id === "inv-bottled-lager")!.quantityOnHand = 50;
+    const prop = activeProperty(state);
+    prop.employees.push(bartender());
+    prop.inventory.find((i) => i.id === "inv-bottled-lager")!.quantityOnHand = 50;
 
-    ensureMenuAutoActivation(state, new EventBus());
-    expect(state.menu.find((m) => m.productId === "prod-bottled-lager")!.isActive).toBe(true);
+    ensureMenuAutoActivation(state, prop, new EventBus());
+    expect(prop.menu.find((m) => m.productId === "prod-bottled-lager")!.isActive).toBe(true);
 
     commandService.setMenuActive(state, "prod-bottled-lager", false);
-    ensureMenuAutoActivation(state, new EventBus());
+    ensureMenuAutoActivation(state, prop, new EventBus());
 
-    expect(state.menu.find((m) => m.productId === "prod-bottled-lager")!.isActive).toBe(false);
+    expect(prop.menu.find((m) => m.productId === "prod-bottled-lager")!.isActive).toBe(false);
   });
 
   it("never deactivates an already-active listing", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    const listing = state.menu.find((m) => m.productId === "prod-cola")!;
+    const prop = activeProperty(state);
+    const listing = prop.menu.find((m) => m.productId === "prod-cola")!;
     listing.isActive = true;
     // No staff and no cola syrup on hand — would fail eligibility if re-evaluated, but activation only ever adds, never removes.
-    ensureMenuAutoActivation(state, new EventBus());
+    ensureMenuAutoActivation(state, prop, new EventBus());
     expect(listing.isActive).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import { createNewGameState } from "@/services/newGameService";
 import { customerSpentSoFar } from "@/simulation/engine/payments";
 import { selectProductForCustomer } from "@/simulation/engine/orderProcessing";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Customer, Tab } from "@/types";
 
 function customer(overrides: Partial<Customer> = {}): Customer {
@@ -56,43 +57,47 @@ function openTab(subtotalCents: number): Tab {
 describe("customerSpentSoFar (budget/tab misalignment fix)", () => {
   it("counts the currently open tab's running total, not just paid-tab history", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const cust = customer({ totalSpent: 0 });
-    state.customers.push(cust);
-    state.tabs.push(openTab(1_800));
+    prop.customers.push(cust);
+    prop.tabs.push(openTab(1_800));
 
-    expect(customerSpentSoFar(state, cust)).toBe(1_800);
+    expect(customerSpentSoFar(prop, cust)).toBe(1_800);
   });
 
   it("adds paid-tab history and the open tab together", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const cust = customer({ totalSpent: 500 });
-    state.customers.push(cust);
-    state.tabs.push(openTab(1_000));
+    prop.customers.push(cust);
+    prop.tabs.push(openTab(1_000));
 
-    expect(customerSpentSoFar(state, cust)).toBe(1_500);
+    expect(customerSpentSoFar(prop, cust)).toBe(1_500);
   });
 
   it("falls back to just totalSpent when there is no open tab", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     const cust = customer({ totalSpent: 700, tabId: null });
-    state.customers.push(cust);
+    prop.customers.push(cust);
 
-    expect(customerSpentSoFar(state, cust)).toBe(700);
+    expect(customerSpentSoFar(prop, cust)).toBe(700);
   });
 
   it("selectProductForCustomer correctly refuses an item that would push an already-heavy open tab over budget (the bug: this used to pass)", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    for (const item of state.inventory) item.quantityOnHand = 100;
-    for (const listing of state.menu) listing.isActive = true;
+    const prop = activeProperty(state);
+    for (const item of prop.inventory) item.quantityOnHand = 100;
+    for (const listing of prop.menu) listing.isActive = true;
 
     const cust = customer({ spendingBudget: 1_000, tabId: "tab-1" });
-    state.customers.push(cust);
+    prop.customers.push(cust);
     // Already has $9.50 on an open tab against a $10.00 budget — nothing should be offered
     // that doesn't fit in the remaining $0.50, even though every individual item is well under $10.
-    state.tabs.push(openTab(950));
+    prop.tabs.push(openTab(950));
 
     const rng = new SeededRandom(1);
-    const listing = selectProductForCustomer(state, cust, rng, true);
+    const listing = selectProductForCustomer(state, prop, cust, rng, true);
     expect(listing).toBeNull();
   });
 });

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
 import { consumeInventoryForOrder } from "@/simulation/engine/orderProcessing";
-import type { Employee, GameState, Order } from "@/types";
+import { activeProperty } from "@/simulation/engine/activeProperty";
+import type { Employee, GameState, Order, OwnedPropertyState } from "@/types";
 
-function makeStateWithStock(): GameState {
+function makeStateWithStock(): { state: GameState; prop: OwnedPropertyState } {
   const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-  for (const item of state.inventory) item.quantityOnHand = 100;
-  return state;
+  const prop = activeProperty(state);
+  for (const item of prop.inventory) item.quantityOnHand = 100;
+  return { state, prop };
 }
 
 function makeColaOrder(): Order {
@@ -41,36 +43,36 @@ function makeBartender(accuracy: number): Employee {
 
 describe("consumeInventoryForOrder", () => {
   it("consumes exact recipe quantities at perfect accuracy", () => {
-    const state = makeStateWithStock();
+    const { prop } = makeStateWithStock();
     const order = makeColaOrder();
-    const colaBefore = state.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
+    const colaBefore = prop.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
 
-    const result = consumeInventoryForOrder(state, order, makeBartender(100));
+    const result = consumeInventoryForOrder(prop, order, makeBartender(100));
     expect(result.success).toBe(true);
 
-    const colaAfter = state.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
+    const colaAfter = prop.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
     expect(colaBefore - colaAfter).toBeCloseTo(1, 5);
   });
 
   it("wastes more inventory at low accuracy than at high accuracy", () => {
-    const lowAccuracyState = makeStateWithStock();
-    const highAccuracyState = makeStateWithStock();
+    const { prop: lowAccuracyProp } = makeStateWithStock();
+    const { prop: highAccuracyProp } = makeStateWithStock();
 
-    consumeInventoryForOrder(lowAccuracyState, makeColaOrder(), makeBartender(0));
-    consumeInventoryForOrder(highAccuracyState, makeColaOrder(), makeBartender(100));
+    consumeInventoryForOrder(lowAccuracyProp, makeColaOrder(), makeBartender(0));
+    consumeInventoryForOrder(highAccuracyProp, makeColaOrder(), makeBartender(100));
 
-    const lowRemaining = lowAccuracyState.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
-    const highRemaining = highAccuracyState.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
+    const lowRemaining = lowAccuracyProp.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
+    const highRemaining = highAccuracyProp.inventory.find((i) => i.id === "inv-cola-syrup")!.quantityOnHand;
 
     expect(lowRemaining).toBeLessThan(highRemaining);
   });
 
   it("fails gracefully when an ingredient is out of stock", () => {
-    const state = makeStateWithStock();
-    const colaItem = state.inventory.find((i) => i.id === "inv-cola-syrup")!;
+    const { prop } = makeStateWithStock();
+    const colaItem = prop.inventory.find((i) => i.id === "inv-cola-syrup")!;
     colaItem.quantityOnHand = 0;
 
-    const result = consumeInventoryForOrder(state, makeColaOrder(), makeBartender(100));
+    const result = consumeInventoryForOrder(prop, makeColaOrder(), makeBartender(100));
     expect(result.success).toBe(false);
     expect(result.missingItemName).toBeTruthy();
   });

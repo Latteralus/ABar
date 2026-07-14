@@ -7,6 +7,7 @@ import {
   reputationWeeklyChange,
   reputationDemandMultiplier,
 } from "@/simulation/engine/reputation";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { DailyReport } from "@/types";
 
 function report(overrides: Partial<DailyReport> = {}): DailyReport {
@@ -35,33 +36,38 @@ function report(overrides: Partial<DailyReport> = {}): DailyReport {
 describe("reputation", () => {
   it("moves the score down after a bad day, but only by a bounded/damped amount", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    const startingScore = state.reputation.score;
+    const prop = activeProperty(state);
+    const startingScore = prop.reputation.score;
 
     updateReputation(
       state,
+      prop,
       new EventBus(),
       report({ averageWaitMinutes: 40, averageSatisfaction: 20, customersLost: 15, lossReasons: { wait_too_long: 10, price_too_high: 5 } }),
     );
 
-    expect(state.reputation.score).toBeLessThan(startingScore);
-    expect(startingScore - state.reputation.score).toBeLessThan(3);
+    expect(prop.reputation.score).toBeLessThan(startingScore);
+    expect(startingScore - prop.reputation.score).toBeLessThan(3);
   });
 
   it("moves the score up after a good day", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    const startingScore = state.reputation.score;
+    const prop = activeProperty(state);
+    const startingScore = prop.reputation.score;
 
-    updateReputation(state, new EventBus(), report({ averageWaitMinutes: 3, averageSatisfaction: 90, customersLost: 0 }));
+    updateReputation(state, prop, new EventBus(), report({ averageWaitMinutes: 3, averageSatisfaction: 90, customersLost: 0 }));
 
-    expect(state.reputation.score).toBeGreaterThan(startingScore);
+    expect(prop.reputation.score).toBeGreaterThan(startingScore);
   });
 
   it("never leaves the 0-100 bounds even after many consecutive bad days", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const prop = activeProperty(state);
     for (let day = 1; day <= 60; day++) {
       state.gameDay = day;
       updateReputation(
         state,
+        prop,
         new EventBus(),
         report({
           gameDay: day,
@@ -72,34 +78,37 @@ describe("reputation", () => {
         }),
       );
     }
-    expect(state.reputation.score).toBeGreaterThanOrEqual(0);
-    expect(state.reputation.score).toBeLessThanOrEqual(100);
+    expect(prop.reputation.score).toBeGreaterThanOrEqual(0);
+    expect(prop.reputation.score).toBeLessThanOrEqual(100);
   });
 
   it("records positive/negative factor labels and derives daily/weekly change from history", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    updateReputation(state, new EventBus(), report({ gameDay: 1, averageSatisfaction: 90, averageWaitMinutes: 2, customersLost: 0 }));
+    const prop = activeProperty(state);
+    updateReputation(state, prop, new EventBus(), report({ gameDay: 1, averageSatisfaction: 90, averageWaitMinutes: 2, customersLost: 0 }));
     updateReputation(
       state,
+      prop,
       new EventBus(),
       report({ gameDay: 2, averageSatisfaction: 10, averageWaitMinutes: 50, customersLost: 10, lossReasons: { wait_too_long: 10 } }),
     );
 
-    expect(state.reputation.history).toHaveLength(2);
-    expect(state.reputation.history[0].positiveFactors.length).toBeGreaterThan(0);
-    expect(state.reputation.history[1].negativeFactors.length).toBeGreaterThan(0);
-    expect(reputationDailyChange(state)).toBeLessThan(0);
-    expect(reputationWeeklyChange(state)).toBeLessThan(0);
+    expect(prop.reputation.history).toHaveLength(2);
+    expect(prop.reputation.history[0].positiveFactors.length).toBeGreaterThan(0);
+    expect(prop.reputation.history[1].negativeFactors.length).toBeGreaterThan(0);
+    expect(reputationDailyChange(prop)).toBeLessThan(0);
+    expect(reputationWeeklyChange(prop)).toBeLessThan(0);
   });
 
   it("maps score to a bounded demand multiplier that increases with reputation", () => {
     const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
-    state.reputation.score = 0;
-    const low = reputationDemandMultiplier(state);
-    state.reputation.score = 50;
-    const mid = reputationDemandMultiplier(state);
-    state.reputation.score = 100;
-    const high = reputationDemandMultiplier(state);
+    const prop = activeProperty(state);
+    prop.reputation.score = 0;
+    const low = reputationDemandMultiplier(prop);
+    prop.reputation.score = 50;
+    const mid = reputationDemandMultiplier(prop);
+    prop.reputation.score = 100;
+    const high = reputationDemandMultiplier(prop);
 
     expect(low).toBeLessThan(mid);
     expect(mid).toBeLessThan(high);

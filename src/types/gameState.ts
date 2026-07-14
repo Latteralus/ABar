@@ -1,18 +1,7 @@
 import type { Cents, EntityId, GameMinute } from "./common";
-import type { OwnedProperty } from "./property";
+import type { OwnedPropertyState } from "./property";
 import type { Bill, BusinessPolicies, InsolvencyStatus, Loan, LedgerEntry } from "./financial";
-import type { ReputationState, Review } from "./reputation";
-import type { ActivePromotion } from "./advertising";
-import type { Employee } from "./employee";
-import type { Customer, CustomerGroup } from "./customer";
-import type { InventoryItem, PurchaseOrder } from "./inventory";
-import type { MenuListing } from "./product";
-import type { Tab, Receipt } from "./transaction";
-import type { ServiceTask, Order } from "./task";
 import type { ActivityLogEntry } from "./activityLog";
-import type { DailyReport } from "./report";
-import type { Equipment } from "./equipment";
-import type { Attraction } from "./attraction";
 
 export type DayState = "between_days" | "opening" | "open" | "closing" | "day_complete" | "bankrupt";
 
@@ -28,6 +17,17 @@ export interface GameCounters {
  * The full serializable simulation state for a save. This is the single source of truth the
  * zustand store holds and the simulation engine mutates — React never derives gameplay facts
  * from anything other than this shape.
+ *
+ * Everything location-specific (equipment, attractions, inventory, staff, customers, tasks,
+ * reputation, ...) lives inside `properties` (one `OwnedPropertyState` per owned/leased
+ * location — see property.ts) rather than as flat top-level fields, since a player can own and
+ * operate several properties at once, none of it transferable between them. Exactly one property
+ * (`activePropertyId`) gets the full live minute-by-minute simulation at a time; every other
+ * owned property runs on a background daily estimate (see simulation/engine/backgroundOperations.ts).
+ *
+ * Fields that stay here, at the top level, are genuinely company-wide: the player has one bank
+ * account (`cash`), one consolidated set of books (`ledger`, though entries may be tagged with
+ * `propertyId`), one shared clock, one startup loan, and one save file — not one per property.
  */
 export interface GameState {
   saveId: EntityId;
@@ -44,38 +44,18 @@ export interface GameState {
   autoOpenEnabled: boolean;
 
   cash: Cents;
-  property: OwnedProperty | null;
-  propertyId: EntityId;
   loan: Loan | null;
   policies: BusinessPolicies;
 
-  employees: Employee[];
-  customers: Customer[];
-  customerGroups: CustomerGroup[];
-
-  inventory: InventoryItem[];
-  purchaseOrders: PurchaseOrder[];
-  equipment: Equipment[];
-  attractions: Attraction[];
-
-  menu: MenuListing[];
-
-  /** 0-100 facility cleanliness. Decays with service volume, restored by clean_bar/clean_table tasks. Feeds Stage 6 reputation once that exists. */
-  barCleanliness: number;
-
-  tabs: Tab[];
-  receipts: Receipt[];
-  tasks: ServiceTask[];
-  orders: Order[];
+  properties: OwnedPropertyState[];
+  /** FK into `properties` — which one is currently live-simulated. Switching is a between-days-only player action (commandService.switchActiveProperty). */
+  activePropertyId: EntityId;
 
   ledger: LedgerEntry[];
+  /** Company-wide bills only (the startup loan) — every other bill kind lives on the owning OwnedPropertyState. */
   bills: Bill[];
   insolvency: InsolvencyStatus | null;
-  reputation: ReputationState;
-  reviews: Review[];
-  activePromotions: ActivePromotion[];
   activityLog: ActivityLogEntry[];
-  dailyReports: DailyReport[];
 
   counters: GameCounters;
 

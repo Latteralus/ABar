@@ -1,6 +1,6 @@
 import { STATUS_LABEL } from "./CustomerTable";
 import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
-import type { Attraction, Customer, CustomerStatus, GameState, Property } from "@/types";
+import type { Attraction, Customer, CustomerStatus, OwnedPropertyState, Property } from "@/types";
 
 const NOT_SEATED_STATUSES: ReadonlySet<CustomerStatus> = new Set(["waiting_for_seat", "leaving", "left", "removed"]);
 
@@ -52,15 +52,15 @@ interface FloorLayout {
 }
 
 /** Pure, cosmetic derivation from live state — no seat/table identity exists in the data model, so this is recomputed fresh every render and nothing here is persisted. */
-export function deriveFloorLayout(state: GameState, property: Property): FloorLayout {
-  const activeCustomers = state.customers.filter((c) => c.status !== "left" && c.status !== "removed");
-  const occupants = state.customers
+export function deriveFloorLayout(prop: OwnedPropertyState, property: Property): FloorLayout {
+  const activeCustomers = prop.customers.filter((c) => c.status !== "left" && c.status !== "removed");
+  const occupants = prop.customers
     .filter((c) => c.seatId !== null && !NOT_SEATED_STATUSES.has(c.status))
     // Stable visual placement: do not sort by current status time, because that made customers
     // appear to hop seats every time their lifecycle state changed.
     .sort((a, b) => a.arrivalGameMinute - b.arrivalGameMinute || a.id.localeCompare(b.id));
 
-  const seating = effectiveSeatingCapacity(state, property);
+  const seating = effectiveSeatingCapacity(prop, property);
   const barSeats: (Customer | null)[] = new Array(seating.barSeatingSlots).fill(null);
   const tableSeatCounts = tableSizes(seating.tableSeatingSlots);
   const tables: (Customer | null)[][] = tableSeatCounts.map((size) => new Array(size).fill(null));
@@ -112,9 +112,9 @@ function attractionRingClass(attraction: Attraction): string {
   }
 }
 
-function AttractionTile({ attraction, state }: { attraction: Attraction; state: GameState }) {
+function AttractionTile({ attraction, prop, gameMinute }: { attraction: Attraction; prop: OwnedPropertyState; gameMinute: number }) {
   const participants = attraction.activeSession
-    ? attraction.activeSession.participantIds.map((id) => state.customers.find((c) => c.id === id)).filter((c): c is Customer => !!c)
+    ? attraction.activeSession.participantIds.map((id) => prop.customers.find((c) => c.id === id)).filter((c): c is Customer => !!c)
     : [];
 
   return (
@@ -124,7 +124,7 @@ function AttractionTile({ attraction, state }: { attraction: Attraction; state: 
       {participants.length > 0 && (
         <div className="floor-queue-row">
           {participants.map((c) => (
-            <Chip key={c.id} customer={c} gameMinute={state.gameMinute} />
+            <Chip key={c.id} customer={c} gameMinute={gameMinute} />
           ))}
         </div>
       )}
@@ -149,13 +149,14 @@ const LEGEND: { bucket: StatusBucket; label: string }[] = [
 ];
 
 interface FloorViewProps {
-  state: GameState;
+  prop: OwnedPropertyState;
+  gameMinute: number;
   property: Property;
 }
 
-export function FloorView({ state, property }: FloorViewProps) {
+export function FloorView({ prop, gameMinute, property }: FloorViewProps) {
   const { barSeats, tables, standingSlots, overflowLine, seatedCapacity, standingCapacity, activeCount } = deriveFloorLayout(
-    state,
+    prop,
     property,
   );
   const seatedUsed = barSeats.filter(Boolean).length + tables.reduce((sum, seats) => sum + seats.filter(Boolean).length, 0);
@@ -188,7 +189,7 @@ export function FloorView({ state, property }: FloorViewProps) {
       <div className="floor-bar-counter">
         {barSeats.map((occupant, i) => (
           <div key={i} className={`floor-stool ${occupant ? "floor-seat-occupied" : ""}`}>
-            {occupant ? <Chip customer={occupant} gameMinute={state.gameMinute} /> : null}
+            {occupant ? <Chip customer={occupant} gameMinute={gameMinute} /> : null}
           </div>
         ))}
       </div>
@@ -199,7 +200,7 @@ export function FloorView({ state, property }: FloorViewProps) {
           <div key={tableIndex} className="floor-table">
             {seats.map((occupant, seatIndex) => (
               <div key={seatIndex} className={`floor-seat ${occupant ? "floor-seat-occupied" : ""}`}>
-                {occupant ? <Chip customer={occupant} gameMinute={state.gameMinute} /> : null}
+                {occupant ? <Chip customer={occupant} gameMinute={gameMinute} /> : null}
               </div>
             ))}
           </div>
@@ -207,12 +208,12 @@ export function FloorView({ state, property }: FloorViewProps) {
       </div>
 
       <div className="floor-section-label">Attractions</div>
-      {state.attractions.length === 0 ? (
+      {prop.attractions.length === 0 ? (
         <p style={{ color: "var(--text-muted)" }}>No attractions installed.</p>
       ) : (
         <div className="floor-attractions-row">
-          {state.attractions.map((attraction) => (
-            <AttractionTile key={attraction.id} attraction={attraction} state={state} />
+          {prop.attractions.map((attraction) => (
+            <AttractionTile key={attraction.id} attraction={attraction} prop={prop} gameMinute={gameMinute} />
           ))}
         </div>
       )}
@@ -223,7 +224,7 @@ export function FloorView({ state, property }: FloorViewProps) {
           <div className="floor-waiting-line">
             {standingSlots.map((c, i) => (
               <div key={c?.id ?? `standing-${i}`} className={`floor-standing-slot ${c ? "floor-seat-occupied" : ""}`}>
-                {c ? <Chip customer={c} gameMinute={state.gameMinute} /> : null}
+                {c ? <Chip customer={c} gameMinute={gameMinute} /> : null}
               </div>
             ))}
           </div>
@@ -235,7 +236,7 @@ export function FloorView({ state, property }: FloorViewProps) {
           <div className="floor-section-label">Overflow Line</div>
           <div className="floor-waiting-line">
             {overflowLine.map((c) => (
-              <Chip key={c.id} customer={c} gameMinute={state.gameMinute} />
+              <Chip key={c.id} customer={c} gameMinute={gameMinute} />
             ))}
           </div>
         </>

@@ -1,5 +1,5 @@
 import { isEquipmentUsable } from "./equipmentMaintenance";
-import type { GameState } from "@/types";
+import type { OwnedPropertyState } from "@/types";
 
 /**
  * A security_system item is deliberately NOT wired into the formal remove_customer task path
@@ -10,6 +10,6 @@ import type { GameState } from "@/types";
  * visible camera system makes people more likely to leave quietly. Binary gate, same shape as
  * tvEffects.hasOperationalTv.
  */
-export function hasOperationalSecuritySystem(state: GameState): boolean {
-  return state.equipment.some((e) => e.category === "security_system" && isEquipmentUsable(e));
+export function hasOperationalSecuritySystem(prop: OwnedPropertyState): boolean {
+  return prop.equipment.some((e) => e.category === "security_system" && isEquipmentUsable(e));
 }

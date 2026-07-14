@@ -4,7 +4,7 @@ import { createId } from "@/services/idService";
 import { formatCents } from "@/utils/money";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { Customer, Employee, GameState, Tab } from "@/types";
+import type { Customer, Employee, GameState, OwnedPropertyState, Tab } from "@/types";
 import { logActivity } from "./activityLogger";
 import { personalitySatisfactionBonus } from "./personalityEffects";
 import { postLedger } from "./ledger";
@@ -22,8 +22,8 @@ export function tabSubtotal(tab: Tab): number {
  * since nothing already rung up on the open tab ever counts against their budget. Every
  * affordability/reorder check should go through this, not raw `customer.totalSpent`.
  */
-export function customerSpentSoFar(state: GameState, customer: Customer): number {
-  const openTab = state.tabs.find((t) => t.id === customer.tabId && t.status === "open");
+export function customerSpentSoFar(prop: OwnedPropertyState, customer: Customer): number {
+  const openTab = prop.tabs.find((t) => t.id === customer.tabId && t.status === "open");
   return customer.totalSpent + (openTab ? tabSubtotal(openTab) : 0);
 }
 
@@ -33,12 +33,13 @@ export function customerSpentSoFar(state: GameState, customer: Customer): number
  */
 export function closeTabAndPay(
   state: GameState,
+  prop: OwnedPropertyState,
   rng: SeededRandom,
   bus: EventBus,
   customer: Customer,
   servingEmployee: Employee | null,
 ): void {
-  const tab = state.tabs.find((t) => t.id === customer.tabId);
+  const tab = prop.tabs.find((t) => t.id === customer.tabId);
   if (!tab) return;
 
   const subtotal = tabSubtotal(tab);
@@ -83,6 +84,7 @@ export function closeTabAndPay(
       amount: drinkSubtotal,
       description: `Drink sales — tab #${tab.tabNumber}`,
       relatedEntityId: tab.id,
+      propertyId: prop.propertyId,
     });
   }
   if (foodSubtotal > 0) {
@@ -92,6 +94,7 @@ export function closeTabAndPay(
       amount: foodSubtotal,
       description: `Food sales — tab #${tab.tabNumber}`,
       relatedEntityId: tab.id,
+      propertyId: prop.propertyId,
     });
   }
   postLedger(state, {
@@ -100,6 +103,7 @@ export function closeTabAndPay(
     amount: tax,
     description: `Sales tax collected — tab #${tab.tabNumber}`,
     relatedEntityId: tab.id,
+    propertyId: prop.propertyId,
   });
   postLedger(state, {
     category: "revenue_bar_tip_share",
@@ -107,6 +111,7 @@ export function closeTabAndPay(
     amount: barTipShare,
     description: `Bar share of tip — tab #${tab.tabNumber}`,
     relatedEntityId: tab.id,
+    propertyId: prop.propertyId,
   });
   if (cardFee > 0) {
     postLedger(state, {
@@ -115,6 +120,7 @@ export function closeTabAndPay(
       amount: cardFee,
       description: `Card processing fee — tab #${tab.tabNumber}`,
       relatedEntityId: tab.id,
+      propertyId: prop.propertyId,
     });
   }
   postLedger(state, {
@@ -123,14 +129,15 @@ export function closeTabAndPay(
     amount: netCashChange,
     description: `Cash received — tab #${tab.tabNumber}`,
     relatedEntityId: tab.id,
+    propertyId: prop.propertyId,
   });
 
   // Section 24: "Employee tip allocation may be simplified initially as an even split among
-  // working employees" — everyone hired works every operating day, so that's just state.employees.
-  if (state.employees.length > 0) {
-    const perEmployeeShare = Math.floor(employeeTipShare / state.employees.length);
-    let remainder = employeeTipShare - perEmployeeShare * state.employees.length;
-    for (const employee of state.employees) {
+  // working employees" — everyone hired works every operating day, so that's just prop.employees.
+  if (prop.employees.length > 0) {
+    const perEmployeeShare = Math.floor(employeeTipShare / prop.employees.length);
+    let remainder = employeeTipShare - perEmployeeShare * prop.employees.length;
+    for (const employee of prop.employees) {
       let share = perEmployeeShare;
       if (remainder > 0) {
         share += 1;
@@ -157,7 +164,7 @@ export function closeTabAndPay(
     paymentMethod,
     cardProcessingFee: cardFee || undefined,
   };
-  state.receipts.push(receipt);
+  prop.receipts.push(receipt);
 
   bus.emit("tab:closed", { tab });
   logActivity(

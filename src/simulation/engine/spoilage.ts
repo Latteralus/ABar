@@ -1,7 +1,7 @@
 import { GAME_TIME_CONFIG } from "@/config/gameConfig";
 import { SPOILAGE_CONFIG } from "@/config/spoilageConfig";
 import type { EventBus } from "@/simulation/events/EventBus";
-import type { GameState, InventoryItem, Property, StorageLocation } from "@/types";
+import type { GameState, InventoryItem, OwnedPropertyState, Property, StorageLocation } from "@/types";
 import { logActivity } from "./activityLogger";
 import { postLedger } from "./ledger";
 import { isEquipmentUsable } from "./equipmentMaintenance";
@@ -23,14 +23,14 @@ export interface StorageUsage {
 }
 
 /** Storage capacity, per pool: general comes from the property, refrigerated/frozen from owned equipment (Master Plan Section 15). */
-export function getStorageUsage(state: GameState, property: Property): StorageUsage {
+export function getStorageUsage(prop: OwnedPropertyState, property: Property): StorageUsage {
   const usage: StorageUsage = {
     general: { used: 0, capacity: property.storageCapacityUnits },
     refrigerated: { used: 0, capacity: 0 },
     frozen: { used: 0, capacity: 0 },
   };
 
-  for (const equipment of state.equipment) {
+  for (const equipment of prop.equipment) {
     // A failed unit provides none of its capacity — it's not actually keeping anything cold/dry.
     if (!isEquipmentUsable(equipment)) continue;
     if (equipment.category === "refrigerator") usage.refrigerated.capacity += equipment.capacity ?? 0;
@@ -38,7 +38,7 @@ export function getStorageUsage(state: GameState, property: Property): StorageUs
     if (equipment.category === "storage_shelving") usage.general.capacity += equipment.capacity ?? 0;
   }
 
-  for (const item of state.inventory) {
+  for (const item of prop.inventory) {
     usage[POOL_BY_STORAGE_LOCATION[item.storageLocation]].used += item.quantityOnHand;
   }
 
@@ -52,12 +52,12 @@ export function getStorageUsage(state: GameState, property: Property): StorageUs
  * existing single averageUnitCost pool (see PROJECT_STATUS.md Section 6). Returns total units
  * wasted, for the daily report.
  */
-export function applySpoilage(state: GameState, bus: EventBus, property: Property): number {
-  const usage = getStorageUsage(state, property);
+export function applySpoilage(state: GameState, prop: OwnedPropertyState, bus: EventBus, property: Property): number {
+  const usage = getStorageUsage(prop, property);
   let wastedUnitsTotal = 0;
   let totalWasteCostCents = 0;
 
-  for (const item of state.inventory as InventoryItem[]) {
+  for (const item of prop.inventory as InventoryItem[]) {
     if (item.shelfLifeGameMinutes === undefined) continue;
     item.daysSinceLastRestock += 1;
 
@@ -92,6 +92,7 @@ export function applySpoilage(state: GameState, bus: EventBus, property: Propert
       type: "debit",
       amount: totalWasteCostCents,
       description: `Spoiled inventory written off — Day ${state.gameDay}`,
+      propertyId: prop.propertyId,
     });
   }
 

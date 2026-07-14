@@ -3,7 +3,7 @@ import { createServiceTask } from "@/simulation/tasks/taskQueue";
 import { rolesFor } from "@/simulation/tasks/roleEligibility";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
-import type { GameState } from "@/types";
+import type { GameState, OwnedPropertyState } from "@/types";
 import { departCustomer } from "./customerLifecycle";
 import { hasCalmBonus } from "./personalityEffects";
 import { logActivity } from "./activityLogger";
@@ -15,20 +15,20 @@ import { hasOperationalSecuritySystem } from "./securitySystemEffects";
  * asks them to leave; they either cooperate or staff call the police — a short, log-driven
  * resolution, not a detailed crime simulation (explicitly out of scope per the spec).
  */
-export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom, bus: EventBus): void {
-  const hasSecurity = state.employees.some((e) => e.role === "security");
-  const calmStaffOnDuty = state.employees.some((e) => (e.role === "bartender" || e.role === "server") && hasCalmBonus(e));
+export function processIntoxicatedCustomers(state: GameState, prop: OwnedPropertyState, rng: SeededRandom, bus: EventBus): void {
+  const hasSecurity = prop.employees.some((e) => e.role === "security");
+  const calmStaffOnDuty = prop.employees.some((e) => (e.role === "bartender" || e.role === "server") && hasCalmBonus(e));
 
-  for (const customer of state.customers) {
+  for (const customer of prop.customers) {
     if (customer.status === "left" || customer.status === "removed") continue;
     if (customer.intoxication < CUSTOMER_BEHAVIOR_CONFIG.intoxicationRemovalThreshold) continue;
 
     if (hasSecurity) {
-      const hasRemovalTask = state.tasks.some(
+      const hasRemovalTask = prop.tasks.some(
         (t) => t.customerId === customer.id && t.type === "remove_customer" && t.status !== "complete" && t.status !== "cancelled",
       );
       if (!hasRemovalTask) {
-        state.tasks.push(
+        prop.tasks.push(
           createServiceTask({
             type: "remove_customer",
             eligibleRoles: rolesFor("remove_customer"),
@@ -63,9 +63,9 @@ export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom,
       const cooperateChance =
         REMOVAL_CONFIG.baseCooperateChance +
         (calmStaffOnDuty ? REMOVAL_CONFIG.calmCooperateBonus : 0) +
-        (hasOperationalSecuritySystem(state) ? REMOVAL_CONFIG.securitySystemCooperateBonus : 0);
+        (hasOperationalSecuritySystem(prop) ? REMOVAL_CONFIG.securitySystemCooperateBonus : 0);
       if (rng.chance(cooperateChance)) {
-        departCustomer(state, bus, rng, customer, "removed_intoxication");
+        departCustomer(state, prop, bus, rng, customer, "removed_intoxication");
         logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} cooperated and left.`);
       } else {
         customer.removalStage = "police_called";
@@ -82,7 +82,7 @@ export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom,
     }
 
     if (customer.removalStage === "police_called" && stageWaited >= REMOVAL_CONFIG.policeResolutionMinutes) {
-      departCustomer(state, bus, rng, customer, "removed_intoxication");
+      departCustomer(state, prop, bus, rng, customer, "removed_intoxication");
       customer.status = "removed";
       logActivity(state, bus, "customer", `Police removed ${customer.firstName} ${customer.lastName}.`, "critical");
     }

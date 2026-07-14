@@ -8,6 +8,7 @@ import { ATTRACTION_CATALOG, getAttractionCatalogEntryForCategory } from "@/data
 import { classifyPriceTier, priceTierTone } from "@/utils/pricing";
 import { computeAttractionStats, type AttractionStats } from "@/simulation/engine/attractionReporting";
 import { activeTaskForAttraction, progressPercent } from "@/utils/taskProgress";
+import { activeProperty } from "@/simulation/engine/activeProperty";
 import type { Attraction, AttractionStatus, GameState } from "@/types";
 
 interface Row {
@@ -45,7 +46,8 @@ export function AttractionsScreen() {
   const requestAttractionContractRepair = useGameStore((s) => s.requestAttractionContractRepair);
 
   if (!state) return null;
-  const rows: Row[] = state.attractions.map((attraction) => ({
+  const prop = activeProperty(state);
+  const rows: Row[] = prop.attractions.map((attraction) => ({
     attraction,
     stats: computeAttractionStats(state as GameState, attraction),
   }));
@@ -96,9 +98,9 @@ export function AttractionsScreen() {
       key: "repairProgress",
       header: "Repair/Clean Progress",
       render: (r) => {
-        const task = activeTaskForAttraction(state, r.attraction.id);
+        const task = activeTaskForAttraction(prop, r.attraction.id);
         if (!task || !task.assignedEmployeeId) return "—";
-        const employee = state.employees.find((emp) => emp.id === task.assignedEmployeeId);
+        const employee = prop.employees.find((emp) => emp.id === task.assignedEmployeeId);
         return `${employee ? `${employee.firstName} ${employee.lastName}` : "Unknown"} — ${progressPercent(task)}%`;
       },
     },
