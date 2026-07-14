@@ -1,4 +1,5 @@
 import { ATTRACTION_CONFIG } from "@/config/attractionConfig";
+import { getAttractionCatalogEntryForCategory } from "@/data/attractions/attractionCatalog";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
 import type { Attraction, GameState } from "@/types";
@@ -36,11 +37,12 @@ export function applyDailyAttractionWear(state: GameState, bus: EventBus): void 
       }
       if (attraction.condition <= 0) {
         attraction.currentStatus = "failed";
+        const { breakdownDescription } = getAttractionCatalogEntryForCategory(attraction.category);
         logActivity(
           state,
           bus,
           "attraction",
-          `${attraction.name} was taken out of service due to a damaged cue.`,
+          `${attraction.name} was taken out of service due to ${breakdownDescription}.`,
           "critical",
           attraction.id,
         );
@@ -57,7 +59,8 @@ export function processAttractionWear(state: GameState, rng: SeededRandom, bus: 
     const chance = Math.max(0, severity) * ATTRACTION_CONFIG.maxPerMinuteBreakdownChance;
     if (rng.chance(chance)) {
       attraction.currentStatus = "failed";
-      logActivity(state, bus, "attraction", `${attraction.name} was taken out of service due to a damaged cue.`, "critical", attraction.id);
+      const { breakdownDescription } = getAttractionCatalogEntryForCategory(attraction.category);
+      logActivity(state, bus, "attraction", `${attraction.name} was taken out of service due to ${breakdownDescription}.`, "critical", attraction.id);
       bus.emit("attraction:failed", { attraction });
     }
   }

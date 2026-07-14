@@ -1,3 +1,4 @@
+import { isEquipmentUsable } from "@/simulation/engine/equipmentMaintenance";
 import type { EquipmentCategory, GameState, Property } from "@/types";
 
 /** Static metadata for equipment the player may purchase (Master Plan Section 33). Starter equipment lives on the Property instead — see starterProperty.ts. */
@@ -226,6 +227,15 @@ export const EQUIPMENT_CATALOG: readonly EquipmentCatalogEntry[] = [
     spaceUnits: 5,
     tier: 2,
   },
+
+  // Priced between the two TV tiers — unlike TVs, a jukebox is a real revenue-generating fixture
+  // (see simulation/engine/jukeboxEffects.ts), not a purely ambient one.
+  { id: "equip-jukebox-classic", name: "Classic Jukebox", category: "jukebox", purchasePrice: 1_600_00, speedRating: 50, spaceUnits: 6, tier: 1 },
+
+  // capacity here means "extra seats added", the same field refrigerator/freezer use for storage
+  // capacity and storage_shelving now uses for general storage — see effectiveSeatingCapacity below.
+  { id: "equip-extra-dining-table", name: "Extra Dining Table", category: "table", purchasePrice: 450_00, capacity: 4, speedRating: 50, spaceUnits: 12, tier: 1 },
+  { id: "equip-extra-bar-stools", name: "Extra Bar Stools", category: "bar_stool", purchasePrice: 200_00, capacity: 4, speedRating: 50, spaceUnits: 4, tier: 1 },
 ];
 
 export function getEquipmentCatalogEntry(id: string): EquipmentCatalogEntry {
@@ -246,13 +256,43 @@ export function wouldExceedEquipmentSpace(state: GameState, property: Property, 
   return usedEquipmentSpace(state) + entry.spaceUnits > property.equipmentFloorSpaceUnits;
 }
 
+export interface EffectiveSeatingCapacity {
+  seatingCapacity: number;
+  barSeatingSlots: number;
+  tableSeatingSlots: number;
+  customerCapacity: number;
+}
+
+/**
+ * Seating capacity, derived fresh from the property's static base plus owned/usable "table"/
+ * "bar_stool" equipment — same shape as spoilage.ts's getStorageUsage (sum equipment on top of a
+ * property base, never mutate Property, which is shared catalog data). Extra furniture raises
+ * total occupancy (customerCapacity), not just the seated/standing mix.
+ */
+export function effectiveSeatingCapacity(state: GameState, property: Property): EffectiveSeatingCapacity {
+  let extraBarSeats = 0;
+  let extraTableSeats = 0;
+  for (const equipment of state.equipment) {
+    if (!isEquipmentUsable(equipment)) continue; // a broken stool doesn't seat anyone
+    if (equipment.category === "bar_stool") extraBarSeats += equipment.capacity ?? 0;
+    if (equipment.category === "table") extraTableSeats += equipment.capacity ?? 0;
+  }
+  const extraSeats = extraBarSeats + extraTableSeats;
+  return {
+    barSeatingSlots: property.barSeatingSlots + extraBarSeats,
+    tableSeatingSlots: property.tableSeatingSlots + extraTableSeats,
+    seatingCapacity: property.seatingCapacity + extraSeats,
+    customerCapacity: property.customerCapacity + extraSeats,
+  };
+}
+
 /** Plain-language explanation of what a piece of equipment actually does, for the Equipment screen (Master Plan Section 52 — "avoid unexplained numbers"). */
 export function describeEquipmentBenefit(category: EquipmentCategory, capacity?: number): string {
   switch (category) {
     case "cooking_equipment":
-      return "Enables or improves food prep capacity (microwaves, fryers, griddles, ovens, cook stations).";
+      return "Enables or improves food prep capacity; higher speedRating cooks faster (microwaves, fryers, griddles, ovens, cook stations).";
     case "bar_station":
-      return "Required to prepare drinks; higher-tier stations support faster drink service.";
+      return "Required to prepare drinks; higher speedRating means faster drink service, not just a bigger price tag.";
     case "refrigerator":
       return `Adds ${capacity ?? 0} units of refrigerated storage capacity.`;
     case "freezer":
@@ -260,19 +300,25 @@ export function describeEquipmentBenefit(category: EquipmentCategory, capacity?:
     case "draft_system":
       return "Required to pour draft beer (e.g. Draft Lager) from a keg.";
     case "glass_washer":
-      return "Supports faster glass turnaround once glassware tracking is added.";
+      return "Cuts how much mess each drink served leaves behind, so the bar needs cleaning less often.";
     case "dishwasher":
-      return "Supports dishwashing capacity for future kitchen workflows.";
+      return "Cuts how much mess each food item served leaves behind, so the bar needs cleaning less often.";
     case "storage_shelving":
       return `Adds ${capacity ?? 0} units of general storage capacity.`;
     case "point_of_sale":
-      return "Speeds up checkout (process_payment tasks) when in good condition.";
+      return "Speeds up checkout (process_payment tasks); higher speedRating checks customers out faster when in good condition.";
     case "security_system":
-      return "Future hook for incident prevention and customer safety.";
+      return "Makes an intoxicated customer more likely to cooperate and leave quietly instead of the police being called.";
     case "maintenance_tool":
-      return "Future hook for faster/lower-cost staff repairs.";
+      return "Speeds up and cheapens repairs done by your own maintenance staff (not contract repairs).";
+    case "table":
+      return `Adds ${capacity ?? 0} more table seats.`;
+    case "bar_stool":
+      return `Adds ${capacity ?? 0} more bar seats.`;
     case "tv":
       return "Keeps seated customers around longer and occasionally prompts them to order another round while watching.";
+    case "jukebox":
+      return "Lets seated customers pay to play a song for a small fee, plus a small ambient satisfaction/dwell-time boost while operational.";
     default:
       return "No direct gameplay effect yet.";
   }

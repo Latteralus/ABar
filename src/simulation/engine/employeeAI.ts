@@ -1,6 +1,7 @@
 import { getRecipeForProduct } from "@/data/recipes/recipes";
 import { CUSTOMER_BEHAVIOR_CONFIG } from "@/config/customerConfig";
 import { TV_CONFIG } from "@/config/tvConfig";
+import { JUKEBOX_CONFIG } from "@/config/jukeboxConfig";
 import { classifyPriceTier } from "@/utils/pricing";
 import { CLEANLINESS_CONFIG } from "@/config/facilityConfig";
 import { MAINTENANCE_CONFIG } from "@/config/maintenanceConfig";
@@ -33,6 +34,10 @@ import { recordEstimatedSecondarySale } from "./attractionRevenue";
 import { personalitySatisfactionBonus, personalitySpeedMultiplier } from "./personalityEffects";
 import { effectivePrice } from "./advertising";
 import { hasOperationalTv } from "./tvEffects";
+import { hasOperationalJukebox } from "./jukeboxEffects";
+import { hasOperationalMaintenanceTool } from "./maintenanceToolEffects";
+import { hasOperationalDishwasher, hasOperationalGlassWasher } from "./cleaningEquipmentEffects";
+import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import { clampRound } from "@/utils/clamp";
 
 const STATUS_BY_TASK_TYPE: Record<TaskType, EmployeeStatus> = {
@@ -248,7 +253,10 @@ function handleDeliverItemComplete(state: GameState, rng: SeededRandom, bus: Eve
     customer.statusEnteredAtGameMinute = state.gameMinute;
     // Randomized so nobody sips a drink for exactly the same number of minutes every time (see customerLifecycle's "consuming" case).
     const [minConsume, maxConsume] = CUSTOMER_BEHAVIOR_CONFIG.consumingDurationMinutesRange;
-    customer.phaseTargetMinutes = rng.int(minConsume, maxConsume) + (hasOperationalTv(state) ? TV_CONFIG.dwellTimeBonusMinutes : 0);
+    customer.phaseTargetMinutes =
+      rng.int(minConsume, maxConsume) +
+      (hasOperationalTv(state) ? TV_CONFIG.dwellTimeBonusMinutes : 0) +
+      (hasOperationalJukebox(state) ? JUKEBOX_CONFIG.dwellTimeBonusMinutes : 0);
   }
 
   if (isAlcoholic(product.id)) {
@@ -260,8 +268,11 @@ function handleDeliverItemComplete(state: GameState, rng: SeededRandom, bus: Eve
   customer.satisfaction = clampRound(customer.satisfaction + satisfactionDelta);
   employee.performance.customersServed += 1;
 
-  // Every item served leaves a little more to clean up (Section 22/25).
-  state.barCleanliness = Math.max(0, state.barCleanliness - CLEANLINESS_CONFIG.decayPerDrinkServed);
+  // Every item served leaves a little more to clean up (Section 22/25) — a glass_washer/dishwasher
+  // reduces how much mess each drink/food item leaves behind.
+  const hasWasherHelp = product.category === "food" ? hasOperationalDishwasher(state) : hasOperationalGlassWasher(state);
+  const cleanlinessDecay = CLEANLINESS_CONFIG.decayPerDrinkServed * (hasWasherHelp ? CLEANLINESS_CONFIG.washerAssistedDecayMultiplier : 1);
+  state.barCleanliness = Math.max(0, state.barCleanliness - cleanlinessDecay);
 
   bus.emit("order:served", { order });
   logActivity(
@@ -291,7 +302,7 @@ function handleSeatCustomerComplete(state: GameState, bus: EventBus, task: Servi
 
   const property = getProperty(state.propertyId);
   const seatedCount = state.customers.filter((c) => c.seatId !== null && c.status !== "left" && c.status !== "removed").length;
-  if (seatedCount >= property.seatingCapacity) return; // no room yet — a fresh seat_customer task will be queued next tick
+  if (seatedCount >= effectiveSeatingCapacity(state, property).seatingCapacity) return; // no room yet — a fresh seat_customer task will be queued next tick
 
   customer.seatId = customer.id;
   customer.status = "waiting_to_order";
@@ -310,19 +321,23 @@ function handleRepairEquipmentComplete(state: GameState, bus: EventBus, task: Se
   const equipment = state.equipment.find((e) => e.id === task.equipmentId);
   if (!equipment) return;
 
+  const partsCost = Math.round(
+    MAINTENANCE_CONFIG.employeeRepairPartsCostCents * (hasOperationalMaintenanceTool(state) ? MAINTENANCE_CONFIG.maintenanceToolCostMultiplier : 1),
+  );
+
   equipment.condition = MAINTENANCE_CONFIG.conditionAfterRepair;
   equipment.currentStatus = "operational";
   equipment.repairHistory.push({
     gameDay: state.gameDay,
     gameMinute: state.gameMinute,
     method: "employee",
-    costCents: MAINTENANCE_CONFIG.employeeRepairPartsCostCents,
+    costCents: partsCost,
   });
 
   postLedger(state, {
     category: "opex_maintenance",
     type: "debit",
-    amount: MAINTENANCE_CONFIG.employeeRepairPartsCostCents,
+    amount: partsCost,
     description: `Repair parts — ${equipment.name}`,
     relatedEntityId: equipment.id,
   });

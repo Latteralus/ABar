@@ -24,10 +24,32 @@ function degradedSeverity(state: GameState, category: EquipmentCategory): number
   return (MAINTENANCE_CONFIG.degradedConditionThreshold - best) / MAINTENANCE_CONFIG.degradedConditionThreshold;
 }
 
-/** Task-duration multiplier for tasks that depend on a given equipment category (undefined category = no effect). */
+/** Highest speedRating among usable units of a category — mirrors bestUsableCondition's "healthiest unit masks a broken one" convention. */
+function bestUsableSpeedRating(state: GameState, category: EquipmentCategory): number | undefined {
+  const usable = state.equipment.filter((e) => e.category === category && isEquipmentUsable(e));
+  if (usable.length === 0) return undefined;
+  return Math.max(...usable.map((e) => e.speedRating));
+}
+
+/**
+ * Task-duration multiplier for tasks that depend on a given equipment category (undefined category
+ * = no effect). Combines two independent factors multiplicatively: condition-based wear (existing)
+ * and speedRating (a tier-3 station is genuinely faster than a tier-1 one at full condition, not
+ * just pricier — previously speedRating was copied onto every purchase and never read anywhere).
+ * baselineSpeedRating (50) is a no-op multiplier so starter equipment's day-1 behavior is unchanged.
+ */
 export function equipmentSpeedMultiplier(state: GameState, category?: EquipmentCategory): number {
   if (!category) return 1;
-  return 1 + degradedSeverity(state, category) * MAINTENANCE_CONFIG.speedPenaltyAtZeroCondition;
+  const conditionMultiplier = 1 + degradedSeverity(state, category) * MAINTENANCE_CONFIG.speedPenaltyAtZeroCondition;
+  const rating = bestUsableSpeedRating(state, category);
+  const ratingMultiplier =
+    rating === undefined
+      ? 1
+      : Math.min(
+          MAINTENANCE_CONFIG.speedRatingMultiplierCeiling,
+          Math.max(MAINTENANCE_CONFIG.speedRatingMultiplierFloor, MAINTENANCE_CONFIG.baselineSpeedRating / rating),
+        );
+  return conditionMultiplier * ratingMultiplier;
 }
 
 /** Ingredient-waste multiplier for recipes that depend on a given equipment category (undefined category = no effect). */
@@ -89,6 +111,14 @@ export function ensureMaintenanceTasks(state: GameState, bus: EventBus): void {
   const hasMaintenanceStaff = state.employees.some((e) => e.role === "maintenance");
   if (!hasMaintenanceStaff) return;
 
+  // Inlined rather than imported from maintenanceToolEffects.ts to avoid a circular import (that
+  // file imports isEquipmentUsable from this one) — see maintenanceToolEffects.ts for the shared,
+  // testable version of this same check used elsewhere.
+  const hasMaintenanceTool = state.equipment.some((e) => e.category === "maintenance_tool" && isEquipmentUsable(e));
+  const repairDuration = Math.round(
+    MAINTENANCE_CONFIG.employeeRepairBaseDurationMinutes * (hasMaintenanceTool ? MAINTENANCE_CONFIG.maintenanceToolDurationMultiplier : 1),
+  );
+
   for (const eq of state.equipment) {
     if (eq.currentStatus !== "failed") continue;
     const hasPendingRepairTask = state.tasks.some(
@@ -102,7 +132,7 @@ export function ensureMaintenanceTasks(state: GameState, bus: EventBus): void {
         type: "repair_equipment",
         eligibleRoles: rolesFor("repair_equipment"),
         requiredSkill: "accuracy",
-        durationGameMinutes: MAINTENANCE_CONFIG.employeeRepairBaseDurationMinutes,
+        durationGameMinutes: repairDuration,
         equipmentId: eq.id,
         createdAtGameMinute: state.gameMinute,
       }),

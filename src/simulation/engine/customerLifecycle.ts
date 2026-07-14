@@ -1,6 +1,7 @@
 import { getProperty } from "@/data/properties";
 import { CUSTOMER_BEHAVIOR_CONFIG } from "@/config/customerConfig";
 import { TV_CONFIG } from "@/config/tvConfig";
+import { JUKEBOX_CONFIG } from "@/config/jukeboxConfig";
 import { SOCIAL_FLAVOR_GENERIC, SOCIAL_FLAVOR_WITH_STAFF } from "@/data/customers/socialFlavor";
 import { fillTemplate } from "@/utils/flavorText";
 import { clampRound } from "@/utils/clamp";
@@ -8,6 +9,8 @@ import { abandonAttractionQueue, removeCustomerFromAttractions } from "./attract
 import { attractionWaitToleranceMinutes } from "./attractionSessions";
 import { maybeGenerateReview } from "./reviews";
 import { hasOperationalTv } from "./tvEffects";
+import { hasOperationalJukebox } from "./jukeboxEffects";
+import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import { customerSpentSoFar } from "./payments";
 import type { EventBus } from "@/simulation/events/EventBus";
 import type { SeededRandom } from "@/simulation/random/SeededRandom";
@@ -66,7 +69,7 @@ export function departCustomer(state: GameState, bus: EventBus, rng: SeededRando
 export function advanceCustomers(state: GameState, rng: SeededRandom, bus: EventBus): void {
   const property = getProperty(state.propertyId);
   const seatedCount = state.customers.filter((c) => c.seatId !== null && c.status !== "left" && c.status !== "removed").length;
-  let availableSeats = property.seatingCapacity - seatedCount;
+  let availableSeats = effectiveSeatingCapacity(state, property).seatingCapacity - seatedCount;
   // With a host on staff, seating goes through a real seat_customer task (see seatingTasks.ts)
   // instead of auto-assigning — that's what gives the host role something to actually do.
   const hasHost = state.employees.some((e) => e.role === "host");
@@ -108,13 +111,16 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
         break;
       }
       case "consuming": {
-        // phaseTargetMinutes was rolled when the drink was delivered (employeeAI.handleDeliverDrinkComplete).
+        // phaseTargetMinutes was rolled when the drink was delivered (employeeAI.handleDeliverItemComplete).
         const tvOn = hasOperationalTv(state);
+        const jukeboxOn = hasOperationalJukebox(state);
         if (tvOn) customer.satisfaction = clampRound(customer.satisfaction + TV_CONFIG.satisfactionBonusPerMinute);
+        if (jukeboxOn) customer.satisfaction = clampRound(customer.satisfaction + JUKEBOX_CONFIG.satisfactionBonusPerMinute);
         const target = customer.phaseTargetMinutes ?? CUSTOMER_BEHAVIOR_CONFIG.consumingDurationMinutesRange[0];
         if (waitedMinutes >= target) {
           const [min, max] = CUSTOMER_BEHAVIOR_CONFIG.socializingDurationMinutesRange;
-          customer.phaseTargetMinutes = rng.int(min, max) + (tvOn ? TV_CONFIG.dwellTimeBonusMinutes : 0);
+          customer.phaseTargetMinutes =
+            rng.int(min, max) + (tvOn ? TV_CONFIG.dwellTimeBonusMinutes : 0) + (jukeboxOn ? JUKEBOX_CONFIG.dwellTimeBonusMinutes : 0);
           setStatus(customer, "deciding_next_order", state.gameMinute);
         }
         break;
@@ -126,7 +132,10 @@ export function advanceCustomers(state: GameState, rng: SeededRandom, bus: Event
           logSocialFlavor(state, bus, rng, customer);
         }
         const tvBonus = hasOperationalTv(state) ? TV_CONFIG.satisfactionBonusPerMinute : 0;
-        customer.satisfaction = clampRound(customer.satisfaction + CUSTOMER_BEHAVIOR_CONFIG.socializingSatisfactionPerMinute + tvBonus);
+        const jukeboxBonus = hasOperationalJukebox(state) ? JUKEBOX_CONFIG.satisfactionBonusPerMinute : 0;
+        customer.satisfaction = clampRound(
+          customer.satisfaction + CUSTOMER_BEHAVIOR_CONFIG.socializingSatisfactionPerMinute + tvBonus + jukeboxBonus,
+        );
 
         const socializingTarget = customer.phaseTargetMinutes ?? CUSTOMER_BEHAVIOR_CONFIG.socializingDurationMinutesRange[0];
         if (waitedMinutes < socializingTarget) break;

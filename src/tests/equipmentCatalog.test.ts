@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
 import { commandService } from "@/services/commandService";
 import { EventBus } from "@/simulation/events/EventBus";
-import { EQUIPMENT_CATALOG, isUpgradeForOwnedEquipment, usedEquipmentSpace } from "@/data/equipment/equipmentCatalog";
+import { EQUIPMENT_CATALOG, effectiveSeatingCapacity, isUpgradeForOwnedEquipment, usedEquipmentSpace } from "@/data/equipment/equipmentCatalog";
 import { getProperty } from "@/data/properties";
 
 describe("expanded equipment catalog", () => {
@@ -46,5 +46,49 @@ describe("expanded equipment catalog", () => {
 
     expect(isUpgradeForOwnedEquipment(state, premiumBar)).toBe(true);
     expect(usedEquipmentSpace(state)).toBeGreaterThan(0);
+  });
+
+  it("includes purchasable table and bar_stool seating", () => {
+    const ids = EQUIPMENT_CATALOG.map((e) => e.id);
+    expect(ids).toEqual(expect.arrayContaining(["equip-extra-dining-table", "equip-extra-bar-stools"]));
+  });
+});
+
+describe("effectiveSeatingCapacity", () => {
+  it("returns the property's base numbers when no table/bar_stool equipment is owned", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const property = getProperty(state.propertyId);
+
+    const seating = effectiveSeatingCapacity(state, property);
+
+    expect(seating).toEqual({
+      barSeatingSlots: property.barSeatingSlots,
+      tableSeatingSlots: property.tableSeatingSlots,
+      seatingCapacity: property.seatingCapacity,
+      customerCapacity: property.customerCapacity,
+    });
+  });
+
+  it("adds owned table/bar_stool capacity to both seating and total customer capacity", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    const property = getProperty(state.propertyId);
+    commandService.purchaseEquipment(state, new EventBus(), "equip-extra-dining-table");
+    commandService.purchaseEquipment(state, new EventBus(), "equip-extra-bar-stools");
+
+    const seating = effectiveSeatingCapacity(state, property);
+
+    expect(seating.tableSeatingSlots).toBe(property.tableSeatingSlots + 4);
+    expect(seating.barSeatingSlots).toBe(property.barSeatingSlots + 4);
+    expect(seating.seatingCapacity).toBe(property.seatingCapacity + 8);
+    expect(seating.customerCapacity).toBe(property.customerCapacity + 8);
+  });
+
+  it("ignores a broken table/bar_stool — a broken one doesn't seat anyone", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    const property = getProperty(state.propertyId);
+    commandService.purchaseEquipment(state, new EventBus(), "equip-extra-dining-table");
+    state.equipment.find((e) => e.category === "table")!.currentStatus = "failed";
+
+    expect(effectiveSeatingCapacity(state, property).tableSeatingSlots).toBe(property.tableSeatingSlots);
   });
 });

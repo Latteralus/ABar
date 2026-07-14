@@ -4,6 +4,7 @@ import { commandService } from "@/services/commandService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { MAINTENANCE_CONFIG } from "@/config/maintenanceConfig";
+import { getEquipmentCatalogEntry } from "@/data/equipment/equipmentCatalog";
 import {
   applyDailyEquipmentWear,
   decayEquipmentOnUse,
@@ -151,6 +152,41 @@ describe("equipment-condition performance multipliers", () => {
   });
 });
 
+describe("speedRating multiplier", () => {
+  it("stays neutral (1x) for starter equipment, whose speedRating already matches the baseline", () => {
+    const { state } = setup();
+    // Starter bar_station's speedRating is 50, the same as MAINTENANCE_CONFIG.baselineSpeedRating,
+    // so day-1 behavior must be unchanged by this feature.
+    expect(barStation(state).speedRating).toBe(MAINTENANCE_CONFIG.baselineSpeedRating);
+    expect(equipmentSpeedMultiplier(state, "bar_station")).toBe(1);
+  });
+
+  it("a higher speedRating makes tasks faster (a lower multiplier) at full condition", () => {
+    const { state } = setup();
+    const premium = getEquipmentCatalogEntry("equip-bar-station-premium");
+    expect(premium.speedRating).toBeGreaterThan(MAINTENANCE_CONFIG.baselineSpeedRating);
+
+    barStation(state).speedRating = premium.speedRating;
+
+    expect(equipmentSpeedMultiplier(state, "bar_station")).toBeLessThan(1);
+  });
+
+  it("a lower speedRating makes tasks slower (a higher multiplier)", () => {
+    const { state } = setup();
+    barStation(state).speedRating = 40; // e.g. a microwave, below the 50 baseline
+
+    expect(equipmentSpeedMultiplier(state, "bar_station")).toBeGreaterThan(1);
+  });
+
+  it("a second, worse unit of the same category doesn't drag down the best one's rating", () => {
+    const { state } = setup();
+    const before = equipmentSpeedMultiplier(state, "bar_station");
+    state.equipment.push({ ...barStation(state), id: "equip-second-bar-station", speedRating: 10 });
+
+    expect(equipmentSpeedMultiplier(state, "bar_station")).toBe(before);
+  });
+});
+
 describe("hasRequiredEquipment", () => {
   it("blocks a product once its only matching equipment has failed", () => {
     const { state } = setup();
@@ -216,6 +252,54 @@ describe("ensureMaintenanceTasks", () => {
 
     ensureMaintenanceTasks(state, bus); // second pass shouldn't double-queue
     expect(state.tasks.filter((t) => t.type === "repair_equipment")).toHaveLength(1);
+  });
+
+  it("queues a shorter repair task when an operational maintenance_tool is owned", () => {
+    const { state, bus } = setup();
+    barStation(state).currentStatus = "failed";
+    state.employees.push({
+      id: "emp-maint",
+      firstName: "Pat",
+      lastName: "Fix",
+      role: "maintenance",
+      wagePerShiftCents: 10000,
+      personality: [],
+      skills: {
+        bartending: 50,
+        serving: 50,
+        cooking: 50,
+        speed: 50,
+        accuracy: 50,
+        charisma: 50,
+        cleanliness: 50,
+        security: 50,
+        management: 50,
+      },
+      shiftsWorked: 0,
+      hiredAtGameMinute: 0,
+      currentTaskId: null,
+      status: "idle",
+      performance: { customersServed: 0, itemsPrepared: 0, ordersFulfilled: 0, wasteGeneratedCents: 0, tipsEarnedCents: 0 },
+    });
+    state.equipment.push({
+      id: "equip-tool-kit",
+      name: "Maintenance Tool Kit",
+      category: "maintenance_tool",
+      purchasePrice: 750_00,
+      speedRating: 55,
+      spaceUnits: 4,
+      tier: 1,
+      condition: 100,
+      currentStatus: "operational",
+      repairHistory: [],
+    });
+
+    ensureMaintenanceTasks(state, bus);
+
+    const task = state.tasks.find((t) => t.type === "repair_equipment");
+    expect(task?.durationGameMinutes).toBe(
+      Math.round(MAINTENANCE_CONFIG.employeeRepairBaseDurationMinutes * MAINTENANCE_CONFIG.maintenanceToolDurationMultiplier),
+    );
   });
 });
 

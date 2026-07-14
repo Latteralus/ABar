@@ -1,4 +1,5 @@
 import { STATUS_LABEL } from "./CustomerTable";
+import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import type { Attraction, Customer, CustomerStatus, GameState, Property } from "@/types";
 
 const NOT_SEATED_STATUSES: ReadonlySet<CustomerStatus> = new Set(["waiting_for_seat", "leaving", "left", "removed"]);
@@ -59,8 +60,9 @@ export function deriveFloorLayout(state: GameState, property: Property): FloorLa
     // appear to hop seats every time their lifecycle state changed.
     .sort((a, b) => a.arrivalGameMinute - b.arrivalGameMinute || a.id.localeCompare(b.id));
 
-  const barSeats: (Customer | null)[] = new Array(property.barSeatingSlots).fill(null);
-  const tableSeatCounts = tableSizes(property.tableSeatingSlots);
+  const seating = effectiveSeatingCapacity(state, property);
+  const barSeats: (Customer | null)[] = new Array(seating.barSeatingSlots).fill(null);
+  const tableSeatCounts = tableSizes(seating.tableSeatingSlots);
   const tables: (Customer | null)[][] = tableSeatCounts.map((size) => new Array(size).fill(null));
 
   let cursor = 0;
@@ -73,7 +75,7 @@ export function deriveFloorLayout(state: GameState, property: Property): FloorLa
     }
   }
 
-  const standingCapacity = Math.max(0, property.customerCapacity - property.seatingCapacity);
+  const standingCapacity = Math.max(0, seating.customerCapacity - seating.seatingCapacity);
   const unseated = activeCustomers
     .filter((c) => c.seatId === null || c.status === "waiting_for_seat")
     .sort((a, b) => a.arrivalGameMinute - b.arrivalGameMinute || a.id.localeCompare(b.id));
@@ -86,7 +88,7 @@ export function deriveFloorLayout(state: GameState, property: Property): FloorLa
     tables,
     standingSlots,
     overflowLine,
-    seatedCapacity: property.seatingCapacity,
+    seatedCapacity: seating.seatingCapacity,
     standingCapacity,
     activeCount: activeCustomers.length,
   };
@@ -94,6 +96,9 @@ export function deriveFloorLayout(state: GameState, property: Property): FloorLa
 
 const ATTRACTION_ICON: Record<Attraction["category"], string> = {
   pool_table: "🎱",
+  darts: "🎯",
+  arcade_cabinet: "🕹️",
+  karaoke_booth: "🎤",
 };
 
 function attractionRingClass(attraction: Attraction): string {

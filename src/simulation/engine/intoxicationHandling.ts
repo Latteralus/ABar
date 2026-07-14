@@ -7,6 +7,7 @@ import type { GameState } from "@/types";
 import { departCustomer } from "./customerLifecycle";
 import { hasCalmBonus } from "./personalityEffects";
 import { logActivity } from "./activityLogger";
+import { hasOperationalSecuritySystem } from "./securitySystemEffects";
 
 /**
  * Handles customers who've crossed the intoxication removal threshold (Master Plan Section 11).
@@ -59,7 +60,10 @@ export function processIntoxicatedCustomers(state: GameState, rng: SeededRandom,
     const stageWaited = state.gameMinute - (customer.removalStageEnteredAtGameMinute ?? state.gameMinute);
 
     if (customer.removalStage === "warned" && stageWaited >= REMOVAL_CONFIG.warnedResolutionMinutes) {
-      const cooperateChance = REMOVAL_CONFIG.baseCooperateChance + (calmStaffOnDuty ? REMOVAL_CONFIG.calmCooperateBonus : 0);
+      const cooperateChance =
+        REMOVAL_CONFIG.baseCooperateChance +
+        (calmStaffOnDuty ? REMOVAL_CONFIG.calmCooperateBonus : 0) +
+        (hasOperationalSecuritySystem(state) ? REMOVAL_CONFIG.securitySystemCooperateBonus : 0);
       if (rng.chance(cooperateChance)) {
         departCustomer(state, bus, rng, customer, "removed_intoxication");
         logActivity(state, bus, "customer", `${customer.firstName} ${customer.lastName} cooperated and left.`);

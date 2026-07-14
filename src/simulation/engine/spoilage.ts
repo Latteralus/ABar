@@ -4,6 +4,7 @@ import type { EventBus } from "@/simulation/events/EventBus";
 import type { GameState, InventoryItem, Property, StorageLocation } from "@/types";
 import { logActivity } from "./activityLogger";
 import { postLedger } from "./ledger";
+import { isEquipmentUsable } from "./equipmentMaintenance";
 
 export type StoragePool = "general" | "refrigerated" | "frozen";
 
@@ -30,8 +31,11 @@ export function getStorageUsage(state: GameState, property: Property): StorageUs
   };
 
   for (const equipment of state.equipment) {
+    // A failed unit provides none of its capacity — it's not actually keeping anything cold/dry.
+    if (!isEquipmentUsable(equipment)) continue;
     if (equipment.category === "refrigerator") usage.refrigerated.capacity += equipment.capacity ?? 0;
     if (equipment.category === "freezer") usage.frozen.capacity += equipment.capacity ?? 0;
+    if (equipment.category === "storage_shelving") usage.general.capacity += equipment.capacity ?? 0;
   }
 
   for (const item of state.inventory) {

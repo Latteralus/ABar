@@ -4,6 +4,7 @@ import { EventBus } from "@/simulation/events/EventBus";
 import { SeededRandom } from "@/simulation/random/SeededRandom";
 import { selectProductForCustomer } from "@/simulation/engine/orderProcessing";
 import { processIntoxicatedCustomers } from "@/simulation/engine/intoxicationHandling";
+import { commandService } from "@/services/commandService";
 import { REMOVAL_CONFIG } from "@/config/customerConfig";
 import { ALCOHOLIC_PRODUCT_IDS } from "@/data/recipes/recipes";
 import type { Customer, Employee, GameState } from "@/types";
@@ -142,5 +143,24 @@ describe("intoxication removal flow", () => {
 
     expect(customer.status).toBe("removed");
     expect(customer.leaveReason).toBe("removed_intoxication");
+  });
+
+  it("raises the cooperate chance when an operational security_system is owned", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    commandService.purchaseEquipment(state, new EventBus(), "equip-security-camera");
+    const customer = makeCustomer({ intoxication: 95 });
+    state.customers.push(customer);
+    const bus = new EventBus();
+    let capturedChance = -1;
+    // Returns false (does not cooperate) so this stays on the police-escalation path, which
+    // doesn't need a full RNG (departCustomer's review generation needs rng.pick, which this
+    // stub doesn't implement) — capturing the probability passed in is all this test needs.
+    const capturingRng = { chance: (p: number) => ((capturedChance = p), false), next: () => 0.99 } as unknown as SeededRandom;
+
+    processIntoxicatedCustomers(state, capturingRng, bus); // first sighting -> warned
+    state.gameMinute += REMOVAL_CONFIG.warnedResolutionMinutes;
+    processIntoxicatedCustomers(state, capturingRng, bus); // resolve warning, capturing the cooperate-chance roll
+
+    expect(capturedChance).toBeCloseTo(REMOVAL_CONFIG.baseCooperateChance + REMOVAL_CONFIG.securitySystemCooperateBonus, 5);
   });
 });

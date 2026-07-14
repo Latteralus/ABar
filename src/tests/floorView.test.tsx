@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
+import { commandService } from "@/services/commandService";
+import { EventBus } from "@/simulation/events/EventBus";
 import { STARTER_PROPERTY } from "@/data/properties/starterProperty";
 import { deriveFloorLayout } from "@/features/operations/FloorView";
 import type { Customer } from "@/types";
@@ -67,5 +69,17 @@ describe("deriveFloorLayout", () => {
     expect(layout.standingCapacity).toBe(4);
     expect(layout.standingSlots.filter(Boolean)).toHaveLength(4);
     expect(layout.overflowLine).toHaveLength(1);
+  });
+
+  it("renders more seats once table/bar_stool equipment is purchased", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: true });
+    commandService.purchaseEquipment(state, new EventBus(), "equip-extra-dining-table");
+    commandService.purchaseEquipment(state, new EventBus(), "equip-extra-bar-stools");
+
+    const layout = deriveFloorLayout(state, STARTER_PROPERTY);
+    const visualSeats = layout.barSeats.length + layout.tables.reduce((sum, table) => sum + table.length, 0);
+
+    expect(visualSeats).toBe(STARTER_PROPERTY.seatingCapacity + 8);
+    expect(layout.seatedCapacity).toBe(STARTER_PROPERTY.seatingCapacity + 8);
   });
 });

@@ -61,6 +61,7 @@ export function EquipmentScreen() {
     { key: "category", header: "Category", render: (e) => CATEGORY_LABEL[e.category] ?? e.category },
     { key: "benefit", header: "Benefit", render: (e) => describeEquipmentBenefit(e.category, e.capacity) },
     { key: "tier", header: "Tier", render: (e) => `T${e.tier ?? 1}` },
+    { key: "speedRating", header: "Speed Rating", render: (e) => `${e.speedRating}` },
     { key: "space", header: "Space", render: (e) => `${e.spaceUnits ?? 0}` },
     { key: "capacity", header: "Capacity", render: (e) => e.capacity ?? "—" },
     { key: "condition", header: "Condition", render: (e) => `${formatPercent(e.condition)}%` },
@@ -115,6 +116,7 @@ export function EquipmentScreen() {
               <th>Category</th>
               <th>Benefit</th>
               <th>Tier</th>
+              <th>Speed Rating</th>
               <th>Space</th>
               <th>Upgrade</th>
               <th>Price</th>
@@ -128,6 +130,7 @@ export function EquipmentScreen() {
                 <td>{CATEGORY_LABEL[entry.category] ?? entry.category}</td>
                 <td>{describeEquipmentBenefit(entry.category, entry.capacity)}</td>
                 <td>T{entry.tier}</td>
+                <td>{entry.speedRating}</td>
                 <td>
                   {entry.spaceUnits} ({equipmentSpaceUsed + entry.spaceUnits}/{property.equipmentFloorSpaceUnits})
                 </td>

@@ -1,7 +1,7 @@
 import type { Cents, EntityId, GameMinute, Percent0to100 } from "./common";
 
-/** Only "pool_table" exists today; the architecture is generic so a second type is a data-catalog addition, not new engine code. */
-export type AttractionCategory = "pool_table";
+/** The architecture is generic over these — a new type is a data-catalog addition, not new engine code. */
+export type AttractionCategory = "pool_table" | "darts" | "arcade_cabinet" | "karaoke_booth";
 
 /** Mirrors EquipmentStatus's state machine (Master Plan Section 48 shape) — its own independent machine, not shared with Equipment. */
 export type AttractionStatus = "operational" | "degraded" | "failed" | "awaiting_repair" | "under_repair";

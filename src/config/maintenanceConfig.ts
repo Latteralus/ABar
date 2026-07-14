@@ -12,9 +12,16 @@ export const MAINTENANCE_CONFIG = {
   speedPenaltyAtZeroCondition: 0.6,
   /** Ingredient-waste multiplier at the most-degraded end of the degraded range (1 + this). */
   wastePenaltyAtZeroCondition: 0.5,
+  /** Neutral point for the speedRating multiplier — matches starter equipment's speedRating (see starterProperty.ts), so day-1 equipment behaves exactly as it does today. */
+  baselineSpeedRating: 50,
+  speedRatingMultiplierFloor: 0.5,
+  speedRatingMultiplierCeiling: 1.5,
   employeeRepairBaseDurationMinutes: 20,
   employeeRepairPartsCostCents: 4000,
   contractRepairCostCents: 15000,
   contractRepairDelayDays: 1,
   conditionAfterRepair: 100,
+  /** A maintenance_tool item speeds up and cheapens *employee* (not contract) repairs — see maintenanceToolEffects.ts. */
+  maintenanceToolDurationMultiplier: 0.7,
+  maintenanceToolCostMultiplier: 0.75,
 };

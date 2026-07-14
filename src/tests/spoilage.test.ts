@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createNewGameState } from "@/services/newGameService";
 import { EventBus } from "@/simulation/events/EventBus";
 import { getProperty } from "@/data/properties";
-import { applySpoilage } from "@/simulation/engine/spoilage";
+import { applySpoilage, getStorageUsage } from "@/simulation/engine/spoilage";
 import { openDay } from "@/simulation/engine/dayCycle";
+import { commandService } from "@/services/commandService";
 
 const LIME_ID = "inv-lime-garnish"; // shelf life: 3 operating days
 
@@ -75,5 +76,26 @@ describe("applySpoilage", () => {
     openDay(state, bus);
 
     expect(lime.daysSinceLastRestock).toBe(0);
+  });
+});
+
+describe("getStorageUsage", () => {
+  it("adds owned, usable storage_shelving capacity to the general pool", () => {
+    const { state, bus, property } = setup();
+    const before = getStorageUsage(state, property).general.capacity;
+
+    commandService.purchaseEquipment(state, bus, "equip-storage-shelving");
+    const after = getStorageUsage(state, property).general.capacity;
+
+    expect(after).toBe(before + 250);
+  });
+
+  it("does not count a failed refrigerator's capacity toward the refrigerated pool", () => {
+    const { state, property } = setup();
+    const fridge = state.equipment.find((e) => e.category === "refrigerator")!;
+    const before = getStorageUsage(state, property).refrigerated.capacity;
+    fridge.currentStatus = "failed";
+
+    expect(getStorageUsage(state, property).refrigerated.capacity).toBe(before - (fridge.capacity ?? 0));
   });
 });

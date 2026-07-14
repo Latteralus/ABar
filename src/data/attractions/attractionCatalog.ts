@@ -15,6 +15,8 @@ export interface AttractionCatalogEntry {
   maxParticipants: number;
   /** Maximum number of queued parties waiting at once; a party that would exceed this is turned away instead of queued. */
   queueCapacityParties: number;
+  /** Interpolated into "{name} was taken out of service due to {breakdownDescription}." in attractionCondition.ts — lets each category have its own flavor without new engine branching. */
+  breakdownDescription: string;
 }
 
 export const ATTRACTION_CATALOG: readonly AttractionCatalogEntry[] = [
@@ -31,6 +33,51 @@ export const ATTRACTION_CATALOG: readonly AttractionCatalogEntry[] = [
     minParticipants: 1,
     maxParticipants: 4,
     queueCapacityParties: 3,
+    breakdownDescription: "a damaged cue",
+  },
+  {
+    id: "attraction-darts",
+    name: "Dartboard",
+    category: "darts",
+    purchasePrice: 700_00,
+    floorSpaceUnits: 10,
+    pricePerGameCents: 150,
+    gameDurationMinutes: 12,
+    // Unlike pool, darts genuinely needs an opponent — this is the real consumer of
+    // selectNextSession's synthetic minParticipants:2 case (see tests/attractions.test.ts).
+    minParticipants: 2,
+    maxParticipants: 4,
+    queueCapacityParties: 2,
+    breakdownDescription: "a damaged dartboard",
+  },
+  {
+    id: "attraction-arcade-cabinet",
+    name: "Arcade Cabinet",
+    category: "arcade_cabinet",
+    purchasePrice: 1_200_00,
+    floorSpaceUnits: 8,
+    pricePerGameCents: 100,
+    gameDurationMinutes: 6,
+    // Solo-friendly, fast turnover, cheap per game — the "quick nickel-and-dime" attraction.
+    minParticipants: 1,
+    maxParticipants: 2,
+    queueCapacityParties: 4,
+    breakdownDescription: "a jammed joystick",
+  },
+  {
+    id: "attraction-karaoke-booth",
+    name: "Karaoke Booth",
+    category: "karaoke_booth",
+    purchasePrice: 2_600_00,
+    floorSpaceUnits: 24,
+    pricePerGameCents: 600,
+    gameDurationMinutes: 20,
+    // A booked time slot, not a quick game — priced and timed accordingly, one flat fee per
+    // session regardless of how many of the 1-4 people are in the booth.
+    minParticipants: 1,
+    maxParticipants: 4,
+    queueCapacityParties: 2,
+    breakdownDescription: "a malfunctioning karaoke machine",
   },
 ];
 

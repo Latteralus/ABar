@@ -93,6 +93,8 @@ export const REMOVAL_CONFIG = {
   baseCooperateChance: 0.5,
   /** Added to the cooperate chance if a calm-trait bartender/server is on shift. */
   calmCooperateBonus: 0.2,
+  /** Added to the cooperate chance if an operational security_system is owned — smaller than calmCooperateBonus (a camera is a real deterrent, a trained employee is more valuable). */
+  securitySystemCooperateBonus: 0.15,
   /** Minutes between calling the police and the customer actually being removed. */
   policeResolutionMinutes: 3,
 };

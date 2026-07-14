@@ -1,4 +1,5 @@
 import { getProperty } from "@/data/properties";
+import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import { createServiceTask } from "@/simulation/tasks/taskQueue";
 import { rolesFor } from "@/simulation/tasks/roleEligibility";
 import type { GameState } from "@/types";
@@ -10,7 +11,7 @@ export function ensureSeatingTasks(state: GameState): void {
 
   const property = getProperty(state.propertyId);
   const seatedCount = state.customers.filter((c) => c.seatId !== null && c.status !== "left" && c.status !== "removed").length;
-  if (seatedCount >= property.seatingCapacity) return;
+  if (seatedCount >= effectiveSeatingCapacity(state, property).seatingCapacity) return;
 
   const hasTaskFor = (customerId: string) =>
     state.tasks.some(

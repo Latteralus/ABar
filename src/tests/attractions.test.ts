@@ -330,6 +330,67 @@ describe("attractionWaitToleranceMinutes", () => {
   });
 });
 
+describe.each([
+  ["attraction-darts", 2],
+  ["attraction-arcade-cabinet", 1],
+  ["attraction-karaoke-booth", 1],
+])("new attraction catalog row: %s", (catalogId, minParticipants) => {
+  it("purchases at the catalog price and appears in state.attractions", () => {
+    const catalogEntry = ATTRACTION_CATALOG.find((e) => e.id === catalogId)!;
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const bus = new EventBus();
+    const cashBefore = state.cash;
+
+    const result = commandService.purchaseAttraction(state, bus, catalogId);
+
+    expect(result.success).toBe(true);
+    expect(state.attractions).toHaveLength(1);
+    expect(state.attractions[0].category).toBe(catalogEntry.category);
+    expect(state.cash).toBe(cashBefore - catalogEntry.purchasePrice);
+  });
+
+  it("fills a session once enough participants join and collects the flat per-game fee", () => {
+    const catalogEntry = ATTRACTION_CATALOG.find((e) => e.id === catalogId)!;
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const bus = new EventBus();
+    commandService.purchaseAttraction(state, bus, catalogId);
+    const attraction = state.attractions[0];
+    const cashBefore = state.cash;
+
+    if (minParticipants === 1) {
+      state.customers.push(makeCustomer({ id: "cust-a" }));
+      joinAttractionQueue(state, bus, attraction, ["cust-a"], null);
+    } else {
+      state.customerGroups.push({ id: "group-1", memberIds: ["cust-a", "cust-b"], arrivalGameMinute: 0 });
+      state.customers.push(makeCustomer({ id: "cust-a", groupId: "group-1" }), makeCustomer({ id: "cust-b", groupId: "group-1" }));
+      joinAttractionQueue(state, bus, attraction, ["cust-a", "cust-b"], "group-1");
+    }
+
+    ensureAttractionQueueProgress(state, bus);
+
+    expect(attraction.activeSession).not.toBeNull();
+    expect(state.cash).toBe(cashBefore + catalogEntry.pricePerGameCents);
+  });
+});
+
+describe("breakdown flavor text is catalog-driven", () => {
+  it("uses the darts catalog entry's breakdownDescription, not pool table's hardcoded text", () => {
+    const state = createNewGameState({ saveName: "Test", acquisitionType: "lease", acceptLoan: false });
+    const bus = new EventBus();
+    commandService.purchaseAttraction(state, bus, "attraction-darts");
+    const attraction = state.attractions[0];
+    attraction.condition = 10;
+    attraction.currentStatus = "degraded";
+    const alwaysBreaks = { chance: () => true } as unknown as SeededRandom;
+
+    processAttractionWear(state, alwaysBreaks, bus);
+
+    const lastLog = state.activityLog[state.activityLog.length - 1];
+    expect(lastLog.message).toContain("a damaged dartboard");
+    expect(lastLog.message).not.toContain("damaged cue");
+  });
+});
+
 describe("determinism across save/reload", () => {
   it("round-trips attraction state (queue, session, history) exactly", () => {
     const { state, bus } = setup();

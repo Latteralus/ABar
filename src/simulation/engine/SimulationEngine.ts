@@ -13,6 +13,7 @@ import { ensureCleaningTasks } from "./cleaning";
 import { processIntoxicatedCustomers } from "./intoxicationHandling";
 import { generateStaffIdleFlavor } from "./staffIdleFlavor";
 import { ensureMaintenanceTasks, processEquipmentWear } from "./equipmentMaintenance";
+import { processJukeboxSongs } from "./jukeboxEffects";
 import { processAttractionDecisions } from "./customerAttractionDecisions";
 import { ensureAttractionQueueProgress } from "./attractionQueue";
 import { advanceAttractionSessions } from "./attractionSessions";
@@ -123,6 +124,7 @@ export class SimulationEngine {
     ensureCleaningTasks(state);
     ensureMaintenanceTasks(state, this.bus);
     processEquipmentWear(state, this.rng, this.bus);
+    processJukeboxSongs(state, this.rng, this.bus);
     processIntoxicatedCustomers(state, this.rng, this.bus);
     advanceEmployees(state, this.rng, this.bus);
     generateStaffIdleFlavor(state, this.rng, this.bus);

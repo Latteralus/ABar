@@ -17,6 +17,9 @@ interface Row {
 
 const CATEGORY_LABEL: Record<string, string> = {
   pool_table: "Pool Table",
+  darts: "Darts",
+  arcade_cabinet: "Arcade Cabinet",
+  karaoke_booth: "Karaoke Booth",
 };
 
 const STATUS_LABEL: Record<AttractionStatus, string> = {

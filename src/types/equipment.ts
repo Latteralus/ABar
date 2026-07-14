@@ -14,7 +14,8 @@ export type EquipmentCategory =
   | "point_of_sale"
   | "security_system"
   | "maintenance_tool"
-  | "tv";
+  | "tv"
+  | "jukebox";
 
 /** Master Plan Section 48. */
 export type EquipmentStatus = "operational" | "degraded" | "failed" | "awaiting_repair" | "under_repair";

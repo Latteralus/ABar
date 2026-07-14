@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { formatCents } from "@/utils/money";
 import { formatPercent } from "@/utils/format";
 import { getProperty } from "@/data/properties";
+import { effectiveSeatingCapacity } from "@/data/equipment/equipmentCatalog";
 import { tabSubtotal } from "@/simulation/engine/payments";
 import type { Tab } from "@/types";
 import { CustomerTable } from "./CustomerTable";
@@ -18,10 +19,11 @@ export function LiveOperationsScreen() {
   if (!state) return null;
 
   const property = getProperty(state.propertyId);
+  const seating = effectiveSeatingCapacity(state, property);
   const activeCustomers = state.customers.filter((c) => c.status !== "left" && c.status !== "removed");
   const waitingCount = activeCustomers.filter((c) => c.status.startsWith("waiting")).length;
   const seatedCount = activeCustomers.filter((c) => c.seatId !== null).length;
-  const standingCapacity = Math.max(0, property.customerCapacity - property.seatingCapacity);
+  const standingCapacity = Math.max(0, seating.customerCapacity - seating.seatingCapacity);
   const unseatedCount = activeCustomers.filter((c) => c.seatId === null || c.status === "waiting_for_seat").length;
   const today = summarizeDay(state.ledger, state.gameDay);
   const openTabs = state.tabs.filter((t) => t.status === "open");
@@ -41,10 +43,10 @@ export function LiveOperationsScreen() {
 
       <Card>
         <div className="card-grid">
-          <StatTile label="Customers" value={`${activeCustomers.length} / ${property.customerCapacity}`} />
+          <StatTile label="Customers" value={`${activeCustomers.length} / ${seating.customerCapacity}`} />
           <StatTile
             label="Available Seats"
-            value={`${Math.max(0, property.seatingCapacity - seatedCount)} / ${property.seatingCapacity}`}
+            value={`${Math.max(0, seating.seatingCapacity - seatedCount)} / ${seating.seatingCapacity}`}
           />
           <StatTile label="Standing / Waiting" value={`${Math.min(unseatedCount, standingCapacity)} / ${standingCapacity}`} />
           <StatTile label="Waiting" value={`${waitingCount}`} />
