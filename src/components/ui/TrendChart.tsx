@@ -43,7 +43,12 @@ export function TrendChart({ series, height = 180, formatValue = (v) => String(v
   const dataMin = allValues.length > 0 ? Math.min(...allValues) : 0;
   const dataMax = allValues.length > 0 ? Math.max(...allValues) : 1;
   const crossesZero = dataMin < 0 && dataMax > 0;
-  const step = niceStep((dataMax - dataMin) / 4 || 1);
+  const range = dataMax - dataMin;
+  // A single data point (or every point equal) makes range 0 — fall back to a step scaled to the
+  // *value's own magnitude*, not a bare "1", which produced a gridline step of 2 against
+  // million-cent values (a 750,000-line chart that crashed the renderer — a real bug this comment
+  // is here to stop from regressing).
+  const step = niceStep(range > 0 ? range / 4 : Math.abs(dataMax) / 4 || 1);
   const yMin = Math.min(dataMin < 0 ? Math.floor(dataMin / step) * step : 0, 0);
   const yMax = Math.max(Math.ceil(dataMax / step) * step, yMin + step);
 
@@ -55,8 +60,11 @@ export function TrendChart({ series, height = 180, formatValue = (v) => String(v
   const xForDay = (day: number) => PAD_LEFT + (dayMax === dayMin ? plotWidth / 2 : ((day - dayMin) / (dayMax - dayMin)) * plotWidth);
   const yForValue = (value: number) => PAD_TOP + (1 - (value - yMin) / (yMax - yMin || 1)) * plotHeight;
 
+  // Hard cap regardless of how yMin/yMax/step end up computed — a chart is never worth more than
+  // a handful of gridlines, and this guarantees a bad step size can produce a slow/garbled chart at
+  // worst, never another unbounded-element renderer crash like the one above.
   const gridlineValues: number[] = [];
-  for (let v = yMin; v <= yMax + 1e-9; v += step) gridlineValues.push(Math.round(v * 100) / 100);
+  for (let v = yMin; v <= yMax + 1e-9 && gridlineValues.length < 12; v += step) gridlineValues.push(Math.round(v * 100) / 100);
 
   if (days.length === 0) {
     return <p style={{ color: "var(--text-muted)", fontSize: 12.5 }}>Not enough history yet.</p>;
